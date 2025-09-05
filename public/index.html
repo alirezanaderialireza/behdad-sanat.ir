@@ -1,0 +1,2247 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM - مدیریت ارتباط با مشتری</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Jalali Moment Library for Persian Calendar -->
+    <script src="https://cdn.jsdelivr.net/npm/jalali-moment/dist/jalali-moment.browser.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Vazirmatn', sans-serif;
+            background-color: #f0f4f8;
+        }
+
+        .login-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+
+        .main-bg {
+            background-color: #ffffff;
+        }
+
+        .sidebar {
+            background-color: #003366;
+            /* Dark Blue */
+            color: white;
+        }
+
+        .sidebar a:hover,
+        .sidebar .active {
+            background-color: #004a99;
+            /* Lighter Blue for hover/active */
+        }
+
+        .header {
+            background-color: white;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .btn-primary {
+            background-color: #ffc107;
+            /* Yellow */
+            color: #003366;
+            /* Dark Blue text */
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary:hover {
+            background-color: #e0a800;
+            /* Darker Yellow on hover */
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 24px;
+            width: 90%;
+            max-width: 700px;
+            /* Increased width for invoice */
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+        }
+
+        .expanded .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .contact-group-header {
+            cursor: pointer;
+            padding: 1rem;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .contact-group-header:hover {
+            background-color: #f3f4f6;
+        }
+
+        .contact-group-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out;
+        }
+
+        .category-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            padding: 8px;
+            background-color: #003366;
+            color: white;
+            border: 4px solid transparent;
+        }
+
+        .category-circle:hover,
+        .category-circle.active {
+            border-color: #ffc107;
+            transform: scale(1.05);
+        }
+
+        .product-circle {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: bold;
+            padding: 8px;
+            background-color: #e0f2fe;
+            color: #003366;
+            font-size: 14px;
+            border: 2px solid #004a99;
+        }
+
+        .product-circle:hover {
+            background-color: #bde0fe;
+            transform: scale(1.05);
+        }
+
+        .confirm-modal-buttons button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        /* Calendar Styles */
+        .calendar {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .calendar th,
+        .calendar td {
+            text-align: center;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .calendar th {
+            background-color: #f8fafc;
+            font-weight: bold;
+        }
+
+        .calendar td {
+            height: 80px;
+            vertical-align: top;
+            position: relative;
+        }
+
+        .calendar .day-number {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .calendar .other-month .day-number {
+            color: #cbd5e1;
+        }
+
+        .calendar .today .day-number {
+            color: #ffffff;
+            background-color: #003366;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .calendar .cheque-dot-container {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .calendar .cheque-dot {
+            width: 10px;
+            /* افزایش سایز */
+            height: 10px;
+            /* افزایش سایز */
+            border-radius: 50%;
+            margin: 2px auto 0;
+        }
+
+        .calendar .day-with-cheques {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .calendar .day-with-cheques:hover {
+            background-color: #f0f4f8;
+        }
+
+        .dot-payable {
+            background-color: #3b82f6;
+            /* Blue */
+        }
+
+        .dot-receivable {
+            background-color: #22c55e;
+            /* Green */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <div id="loginPage" class="flex items-center justify-center min-h-screen">
+            <div class="login-card w-full max-w-md p-8 space-y-6">
+                <div class="text-center"><i class="fas fa-users text-5xl text-[#003366]"></i>
+                    <h2 class="mt-4 text-3xl font-bold text-gray-900">ورود به CRM</h2>
+                    <p class="mt-2 text-sm text-gray-600">اطلاعات کاربری خود را وارد کنید</p>
+                </div>
+                <form id="loginForm" class="space-y-6">
+                    <div><label for="username" class="block text-sm font-medium text-gray-700">نام کاربری</label><input
+                            id="username" name="username" type="text" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#003366] focus:border-[#003366] sm:text-sm">
+                    </div>
+                    <div><label for="password" class="block text-sm font-medium text-gray-700">رمز عبور</label><input
+                            id="password" name="password" type="password" required
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#003366] focus:border-[#003366] sm:text-sm">
+                    </div>
+                    <p id="loginError" class="text-red-500 text-sm hidden">نام کاربری یا رمز عبور اشتباه است.</p>
+                    <div><button type="submit"
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#e0a800]">ورود</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="dashboardPage" class="hidden">
+            <div class="flex h-screen main-bg">
+                <aside class="sidebar w-64 flex-shrink-0">
+                    <div class="p-6 text-center">
+                        <h1 class="text-2xl font-bold text-yellow-400">بهداد صنعت جنوب</h1>
+                    </div>
+                    <nav id="sidebarNav" class="mt-6"></nav>
+                </aside>
+                <div class="flex-1 flex flex-col overflow-hidden">
+                    <header class="header p-4 flex justify-between items-center">
+                        <h2 id="pageTitle" class="text-xl font-bold text-gray-800">داشبورد</h2>
+                        <div class="flex items-center"><span id="welcomeUser" class="ml-4 text-gray-700"></span><button
+                                id="logoutButton" class="mr-4 text-gray-500 hover:text-red-600"><i
+                                    class="fas fa-sign-out-alt text-xl"></i></button></div>
+                    </header>
+                    <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
+                        <div id="contentArea"></div>
+                    </main>
+                </div>
+            </div>
+        </div>
+
+        <div id="modalContainer"></div>
+    </div>
+
+
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const SUPABASE_URL = 'https://ejyaruasxshpjzzhmedx.supabase.co';
+            const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVqeWFydWFzeHNocGp6emhtZWR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYwNjcwMTEsImV4cCI6MjA3MTY0MzAxMX0.jKJwIBpbVQUqAdR-WztfVDy8LgbSsDyIQk0QoRKT_Oc';
+            const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+            const app = {
+                // DOM Elements
+                loginPage: document.getElementById('loginPage'),
+                dashboardPage: document.getElementById('dashboardPage'),
+                loginForm: document.getElementById('loginForm'),
+                loginError: document.getElementById('loginError'),
+                sidebarNav: document.getElementById('sidebarNav'),
+                pageTitle: document.getElementById('pageTitle'),
+                welcomeUser: document.getElementById('welcomeUser'),
+                contentArea: document.getElementById('contentArea'),
+                logoutButton: document.getElementById('logoutButton'),
+                modalContainer: document.getElementById('modalContainer'),
+
+                // Data arrays
+                users: {}, // Will store user profiles {id: {full_name, role}}
+                contacts: [],
+                companies: [],
+                products: [],
+                productCategories: [],
+                salesOrders: [],
+                messages: [],
+                cheques: [],
+
+                // App State
+                currentUser: null,
+                activePage: null,
+                dataLoaded: false,
+                currentCalendarDate: moment(),
+
+                navItems: {
+                    admin: [
+                        { id: 'dashboard', icon: 'fa-tachometer-alt', text: 'داشبورد', content: 'generateDashboardContent' },
+                        { id: 'contacts', icon: 'fa-address-book', text: 'مخاطبین', content: 'generateContactsContent' },
+                        { id: 'companies', icon: 'fa-building', text: 'شرکت‌ها', content: 'generateCompaniesContent' },
+                        { id: 'cheques', icon: 'fa-money-check-dollar', text: 'چک‌ها', content: 'generateChequesContent' },
+                        { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فروش', content: 'generateSalesContent' },
+                        { id: 'products', icon: 'fa-box-open', text: 'محصولات', content: 'generateProductsContent' },
+                        { id: 'users', icon: 'fa-users-cog', text: 'مدیریت کاربران', content: 'generateUserManagementContent' },
+                    ],
+                    // ... other roles can be defined here
+                },
+
+                // --- Core App Logic ---
+
+                async init() {
+                    this.loginForm.addEventListener('submit', this.handleLogin.bind(this));
+                    this.logoutButton.addEventListener('click', this.handleLogout.bind(this));
+
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                        await this.setupSession(session.user);
+                    } else {
+                        this.loginPage.classList.remove('hidden');
+                    }
+                },
+
+                async setupSession(user) {
+                    let { data: profile, error } = await supabase
+                        .from('profiles')
+                        .select('full_name, role')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (error || !profile) {
+                        console.error('Error fetching profile:', error);
+                        alert('خطا در دریافت اطلاعات پروفایل کاربر. لطفا مطمئن شوید برای این کاربر پروفایل ساخته شده است.');
+                        await this.handleLogout();
+                        return;
+                    }
+
+                    this.currentUser = {
+                        id: user.id,
+                        email: user.email,
+                        name: profile.full_name,
+                        role: profile.role
+                    };
+
+                    await this.loadAllData();
+                    this.showDashboard();
+                },
+
+                async loadAllData() {
+                    console.log("Loading all data from Supabase...");
+                    const [
+                        companiesRes, contactsRes, categoriesRes, productsRes, salesRes, chequesRes, messagesRes, profilesRes
+                    ] = await Promise.all([
+                        supabase.from('companies').select('*'),
+                        supabase.from('contacts').select('*'),
+                        supabase.from('product_categories').select('*'),
+                        supabase.from('products').select('*'),
+                        supabase.from('sales_orders').select('*'),
+                        supabase.from('cheques').select('*'),
+                        supabase.from('messages').select('*'),
+                        supabase.from('profiles').select('id, full_name, role')
+                    ]);
+
+                    this.companies = companiesRes.data || [];
+                    this.contacts = contactsRes.data || [];
+                    this.productCategories = categoriesRes.data || [];
+                    this.products = productsRes.data || [];
+                    this.salesOrders = salesRes.data || [];
+                    this.cheques = chequesRes.data || [];
+                    this.messages = messagesRes.data || [];
+
+                    this.users = {};
+                    if (profilesRes.data) {
+                        profilesRes.data.forEach(p => {
+                            this.users[p.id] = { name: p.full_name, role: p.role };
+                        });
+                    }
+
+                    this.dataLoaded = true;
+                    console.log("All data loaded.");
+                    this.refreshCurrentPage();
+                },
+
+                // --- Authentication ---
+
+                async handleLogin(e) {
+                    e.preventDefault();
+                    this.loginError.classList.add('hidden');
+                    const email = e.target.username.value;
+                    const password = e.target.password.value;
+
+                    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+                    if (error) {
+                        this.loginError.textContent = 'ایمیل یا رمز عبور اشتباه است.';
+                        this.loginError.classList.remove('hidden');
+                        console.error('Error signing in:', error);
+                    } else if (data.user) {
+                        await this.setupSession(data.user);
+                    }
+                },
+
+                async handleLogout() {
+                    await supabase.auth.signOut();
+                    this.currentUser = null;
+                    Object.keys(this).forEach(key => {
+                        if (Array.isArray(this[key])) this[key] = [];
+                    });
+                    this.loginPage.classList.remove('hidden');
+                    this.dashboardPage.classList.add('hidden');
+                    this.loginForm.reset();
+                },
+
+
+                showDashboard() { this.loginPage.classList.add('hidden'); this.dashboardPage.classList.remove('hidden'); this.welcomeUser.textContent = `خوش آمدید، ${this.currentUser.name}`; this.buildSidebar(); this.loadContent(this.navItems[this.currentUser.role][0]); },
+                buildSidebar() { this.sidebarNav.innerHTML = ''; const items = this.navItems[this.currentUser.role]; items.forEach((item, index) => { const link = document.createElement('a'); link.href = '#'; link.className = `flex items-center px-6 py-3 text-base transition-colors duration-200 ${index === 0 ? 'active' : ''}`; link.innerHTML = `<i class="fas ${item.icon} w-6"></i><span class="mx-4">${item.text}</span>`; link.onclick = (e) => { e.preventDefault(); document.querySelectorAll('#sidebarNav a').forEach(a => a.classList.remove('active')); link.classList.add('active'); this.loadContent(item); }; this.sidebarNav.appendChild(link); }); },
+
+                loadContent(item) {
+                    this.activePage = item;
+                    this.pageTitle.textContent = item.text;
+                    if (typeof this[item.content] === 'function') {
+                        this.contentArea.innerHTML = this[item.content]();
+                    } else {
+                        this.contentArea.innerHTML = `<div class="card p-6">محتوای صفحه ${item.text} در اینجا قرار می‌گیرد.</div>`;
+                    }
+                },
+
+                refreshCurrentPage() {
+                    if (this.activePage) {
+                        this.loadContent(this.activePage);
+                    }
+                },
+
+                // Helper Functions
+                formatPrice(price) {
+                    return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
+                },
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString('fa-IR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                },
+                getPersianStatus(status) {
+                    const statuses = {
+                        'pending_manager_approval': { text: 'در انتظار تایید مدیر', color: 'bg-yellow-100 text-yellow-800' },
+                        'initial_approval': { text: 'تایید اولیه', color: 'bg-blue-100 text-blue-800' },
+                        'completed': { text: 'تکمیل شده', color: 'bg-green-100 text-green-800' },
+                        'rejected': { text: 'رد شده', color: 'bg-red-100 text-red-800' }
+                    };
+                    return statuses[status] || { text: status, color: 'bg-gray-100 text-gray-800' };
+                },
+
+                // Content Generation Functions
+                generateDashboardContent() {
+                    // --- محاسبات هوشمند داشبورد ---
+                    const now = new Date();
+                    const currentMonth = now.getMonth();
+                    const currentYear = now.getFullYear();
+
+                    // 1. فروش ماه جاری
+                    const monthlySales = this.salesOrders
+                        .filter(order => {
+                            const orderDate = new Date(order.orderDate);
+                            return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
+                        })
+                        .reduce((sum, order) => sum + order.totalPrice, 0);
+
+                    // 2. مشتریان برتر
+                    const customerSpending = {};
+                    this.salesOrders.forEach(order => {
+                        customerSpending[order.contactId] = (customerSpending[order.contactId] || 0) + order.totalPrice;
+                    });
+                    const topCustomerIds = Object.keys(customerSpending).sort((a, b) => customerSpending[b] - customerSpending[a]).slice(0, 3);
+
+                    // 3. فروشندگان برتر
+                    const salespersonSales = {};
+                    this.salesOrders.forEach(order => {
+                        salespersonSales[order.createdBy] = (salespersonSales[order.createdBy] || 0) + order.totalPrice;
+                    });
+                    const topSalespersonUsernames = Object.keys(salespersonSales).sort((a, b) => salespersonSales[b] - salespersonSales[a]).slice(0, 3);
+
+                    // 4. آخرین فروش‌ها
+                    const latestSales = this.salesOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate)).slice(0, 5);
+
+                    // --- ساخت HTML داشبورد ---
+
+                    // بخش کارت‌های آمار کلی
+                    const statsCardsHtml = `
+                        <div class="card p-4 flex items-center"><div class="bg-blue-100 p-3 rounded-full"><i class="fas fa-users text-xl text-blue-600"></i></div><div class="mr-3"><p class="text-gray-500 text-sm">تعداد مخاطبین</p><p class="text-xl font-bold text-gray-800">${this.contacts.length}</p></div></div>
+                        <div class="card p-4 flex items-center"><div class="bg-green-100 p-3 rounded-full"><i class="fas fa-building text-xl text-green-600"></i></div><div class="mr-3"><p class="text-gray-500 text-sm">تعداد شرکت‌ها</p><p class="text-xl font-bold text-gray-800">${this.companies.length}</p></div></div>
+                        <div class="card p-4 flex items-center"><div class="bg-red-100 p-3 rounded-full"><i class="fas fa-box-open text-xl text-red-600"></i></div><div class="mr-3"><p class="text-gray-500 text-sm">تعداد محصولات</p><p class="text-xl font-bold text-gray-800">${this.products.length}</p></div></div>
+                        <div class="card p-4 flex items-center"><div class="bg-yellow-100 p-3 rounded-full"><i class="fas fa-file-invoice-dollar text-xl text-yellow-600"></i></div><div class="mr-3"><p class="text-gray-500 text-sm">کل فروش‌ها</p><p class="text-xl font-bold text-gray-800">${this.salesOrders.length}</p></div></div>
+                    `;
+
+                    // بخش مشتریان برتر
+                    const topCustomersHtml = topCustomerIds.map((id, index) => {
+                        const contact = this.contacts.find(c => c.id == id);
+                        return `<li class="flex items-center justify-between py-2 border-b last:border-none"><div class="flex items-center"><span class="font-bold text-gray-500 w-6">${index + 1}.</span><span>${contact ? contact.name : 'حذف شده'}</span></div><span class="font-bold text-green-600">${this.formatPrice(customerSpending[id])}</span></li>`;
+                    }).join('') || '<p class="text-sm text-gray-500">هنوز فروشی ثبت نشده است.</p>';
+
+                    // بخش فروشندگان برتر
+                    const topSalespeopleHtml = topSalespersonUsernames.map((username, index) => {
+                        const salesperson = this.users[username];
+                        return `<li class="flex items-center justify-between py-2 border-b last:border-none"><div class="flex items-center"><span class="font-bold text-gray-500 w-6">${index + 1}.</span><span>${salesperson ? salesperson.name : 'حذف شده'}</span></div><span class="font-bold text-blue-600">${this.formatPrice(salespersonSales[username])}</span></li>`;
+                    }).join('') || '<p class="text-sm text-gray-500">هنوز فروشی ثبت نشده است.</p>';
+
+                    // بخش آخرین فروش‌ها
+                    const latestSalesHtml = latestSales.map(order => {
+                        const contact = this.contacts.find(c => c.id === order.contactId);
+                        const salesperson = this.users[order.createdBy];
+                        return `<tr class="border-b last:border-none"><td class="py-3 px-2">${contact ? contact.name : 'ناشناس'}</td><td class="py-3 px-2">${salesperson ? salesperson.name : 'ناشناس'}</td><td class="py-3 px-2">${this.formatDate(order.orderDate)}</td><td class="py-3 px-2 font-semibold">${this.formatPrice(order.totalPrice)}</td></tr>`;
+                    }).join('');
+
+                    return `
+                        <!-- ردیف بالای داشبورد: کارت‌های آمار کلی -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                            ${statsCardsHtml}
+                        </div>
+
+                        <!-- بخش اصلی داشبورد -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            
+                            <!-- ستون اصلی - فروش‌ها -->
+                            <div class="lg:col-span-2 space-y-6">
+                                <div class="card p-6">
+                                    <h3 class="text-lg font-bold mb-4 text-gray-800">آخرین فروش‌ها</h3>
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full text-sm text-right">
+                                            <thead class="text-xs text-gray-600 uppercase bg-gray-50"><tr><th class="py-2 px-2">مشتری</th><th class="py-2 px-2">فروشنده</th><th class="py-2 px-2">تاریخ</th><th class="py-2 px-2">مبلغ</th></tr></thead>
+                                            <tbody>${latestSalesHtml || '<tr><td colspan="4" class="text-center py-4 text-gray-500">هنوز فروشی ثبت نشده است.</td></tr>'}</tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ستون کناری - آمارها -->
+                            <div class="space-y-6">
+                                <div class="card p-6 text-center bg-blue-600 text-white">
+                                    <p class="text-lg">فروش این ماه</p>
+                                    <p class="text-4xl font-bold mt-2">${this.formatPrice(monthlySales)}</p>
+                                </div>
+                                <div class="card p-6">
+                                    <h3 class="text-lg font-bold mb-4 text-gray-800">مشتریان برتر</h3>
+                                    <ul>${topCustomersHtml}</ul>
+                                </div>
+                                <div class="card p-6">
+                                    <h3 class="text-lg font-bold mb-4 text-gray-800">فروشندگان برتر</h3>
+                                    <ul>${topSalespeopleHtml}</ul>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                },
+                generateContactsContent() {
+                    // ADDED: Filter out any contacts that are missing essential data like a name or status
+                    const validContacts = this.contacts.filter(c => c && c.name && c.status);
+
+                    const customers = validContacts.filter(c => c.status === 'مشتری');
+                    const negotiating = validContacts.filter(c => c.status === 'در حال مذاک-ره');
+                    const newLeads = validContacts.filter(c => c.status === 'سرنخ جدید');
+                    const initialTalks = validContacts.filter(c => c.status === 'مذاکره اولیه');
+
+                    const createTableRows = (contacts) => {
+                        if (contacts.length === 0) return '<tr><td colspan="7" class="text-center py-4 text-gray-500">مخاطبی در این وضعیت وجود ندارد.</td></tr>';
+
+                        return contacts.map(contact => {
+                            const company = this.companies.find(c => c.id === contact.companyId);
+                            const canEdit = this.currentUser.role === 'admin' || contact.createdBy === this.currentUser.username;
+
+                            const editButton = canEdit
+                                ? `<button onclick="app.showContactFormModal('${contact.id}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-edit"></i> ویرایش</button>`
+                                : `<span class="font-medium text-gray-400 cursor-not-allowed" title="شما ایجاد کننده این مخاطب نیستید"><i class="fas fa-edit"></i> ویرایش</span>`;
+
+                            const contactOrders = this.salesOrders.filter(o => o.contactId === contact.id);
+                            const lastOrder = contactOrders.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate))[0];
+                            const historyCell = lastOrder
+                                ? `<span class="text-sm">${this.formatDate(lastOrder.orderDate)}</span>`
+                                : '-';
+
+                            return `
+                <tr class="bg-white border-b hover:bg-gray-50">
+                    <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${contact.name}</td>
+                    <td class="px-6 py-4">${company ? company.name : '-'}</td>
+                    <td class="px-6 py-4">${this.users[contact.createdBy]?.name || 'نامشخص'}</td>
+                    <td class="px-6 py-4">
+                        ${historyCell}
+                        <button onclick="app.showOrderHistoryModal('${contact.id}')" class="text-blue-600 hover:text-blue-800 mr-2" title="مشاهده تاریخچه خرید"><i class="fas fa-history text-md"></i></button>
+                    </td>
+                    <td class="px-6 py-4"><button onclick="app.showContactDetails('${contact.id}')" class="text-blue-600 hover:text-blue-800"><i class="fas fa-info-circle text-lg"></i></button></td>
+                    <td class="px-6 py-4 text-left">${editButton}<button onclick="app.deleteContact('${contact.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button></td>
+                </tr>`;
+                        }).join('');
+                    };
+
+                    const createGroup = (title, contacts, id, bgColor) => `
+        <div class="border rounded-lg mb-4">
+            <div class="contact-group-header flex justify-between items-center ${bgColor}" onclick="app.toggleContactGroup('${id}')">
+                <h4 class="font-bold">${title} (${contacts.length})</h4>
+                <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+            <div id="${id}" class="contact-group-content">
+                <div class="overflow-x-auto"><table class="w-full text-sm text-right text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr><th scope="col" class="px-6 py-3">نام</th><th scope="col" class="px-6 py-3">شرکت</th><th scope="col" class="px-6 py-3">مسئول</th><th scope="col" class="px-6 py-3">آخرین خرید</th><th scope="col" class="px-6 py-3">جزئیات</th><th scope="col" class="px-6 py-3 text-left">عملیات</th></tr></thead><tbody>${createTableRows(contacts)}</tbody></table></div>
+            </div>
+        </div>`;
+
+                    return `<div class="card p-6">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"><h3 class="text-xl font-bold text-gray-800">مدیریت مخاطبین</h3><button onclick="app.showContactFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن مخاطب جدید</button></div>
+        <div class="mb-4">
+            <h3 class="text-lg font-bold mb-2 text-green-700">مشتریان (${customers.length})</h3>
+            <div class="overflow-x-auto border rounded-lg"><table class="w-full text-sm text-right text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-green-50"><tr><th scope="col" class="px-6 py-3">نام</th><th scope="col" class="px-6 py-3">شرکت</th><th scope="col" class="px-6 py-3">مسئول</th><th scope="col" class="px-6 py-3">آخرین خرید</th><th scope="col" class="px-6 py-3">جزئیات</th><th scope="col" class="px-6 py-3 text-left">عملیات</th></tr></thead><tbody>${createTableRows(customers)}</tbody></table></div>
+        </div>
+        ${createGroup('در حال مذاکره', negotiating, 'group-negotiating', 'bg-yellow-50')}
+        ${createGroup('سرنخ‌های جدید', newLeads, 'group-new-leads', 'bg-blue-50')}
+        ${createGroup('مذاکره اولیه', initialTalks, 'group-initial-talks', 'bg-gray-50')}
+    </div>`;
+                },
+
+
+
+                toggleContactGroup(groupId) {
+                    const group = document.getElementById(groupId);
+                    const header = group.previousElementSibling;
+                    if (group.style.maxHeight) {
+                        group.style.maxHeight = null;
+                        header.classList.remove('expanded');
+                    } else {
+                        group.style.maxHeight = group.scrollHeight + "px";
+                        header.classList.add('expanded');
+                    }
+                },
+
+                generateCompaniesContent() {
+                    const tableContent = this.companies.map(company => {
+                        const contactCount = this.contacts.filter(c => c.companyId === company.id).length;
+                        return `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${company.name}</td>
+                <td class="px-6 py-4">${company.industry || '-'}</td>
+                <td class="px-6 py-4">${company.phone || '-'}</td>
+                <td class="px-6 py-4">${contactCount}</td>
+                <td class="px-6 py-4 text-left">
+                    <button onclick="app.showCompanyFormModal('${company.id}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-edit"></i> ویرایش</button>
+                    <button onclick="app.deleteCompany('${company.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+                </td>
+            </tr>
+        `;
+                    }).join('');
+
+                    return `
+        <div class="card p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h3 class="text-xl font-bold text-gray-800">مدیریت شرکت‌ها</h3>
+                <button onclick="app.showCompanyFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                    <i class="fas fa-plus ml-2"></i>افزودن شرکت
+                </button>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-sm text-right text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">نام شرکت</th>
+                            <th scope="col" class="px-6 py-3">صنعت</th>
+                            <th scope="col" class="px-6 py-3">تلفن</th>
+                            <th scope="col" class="px-6 py-3">تعداد مخاطبین</th>
+                            <th scope="col" class="px-6 py-3 text-left">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableContent.length > 0 ? tableContent : '<tr><td colspan="5" class="text-center py-4 text-gray-500">هیچ شرکتی ثبت نشده است.</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>`;
+                },
+                showCompanyFormModal(companyId = null) {
+                    const isEdit = companyId !== null;
+                    const company = isEdit ? this.companies.find(c => c.id === companyId) : {};
+                    const title = isEdit ? 'ویرایش شرکت' : 'افزودن شرکت جدید';
+
+                    const modalHTML = `
+        <div class="modal-backdrop" id="companyFormModal">
+            <div class="modal-content max-w-lg">
+                <form id="companyForm">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('companyFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm">نام شرکت</label><input name="name" value="${company.name || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                            <div><label class="block text-sm">صنعت</label><input name="industry" value="${company.industry || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+                        </div>
+                        <div><label class="block text-sm">تلفن</label><input name="phone" value="${company.phone || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" onclick="app.closeModal('companyFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    document.getElementById('companyForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        // The third parameter (previouslyAssignedContacts) is no longer needed.
+                        this.saveCompany(new FormData(e.target), companyId);
+                    };
+                },
+                async saveCompany(formData, companyId) {
+                    const companyData = {
+                        name: formData.get('name'),
+                        industry: formData.get('industry'),
+                        phone: formData.get('phone'),
+                    };
+
+                    try {
+                        let response;
+                        if (companyId) { // ویرایش
+                            response = await supabase.from('companies').update(companyData).eq('id', companyId);
+                        } else { // افزودن
+                            response = await supabase.from('companies').insert([companyData]);
+                        }
+                        if (response.error) throw response.error;
+                        this.closeModal('companyFormModal');
+                    } catch (error) {
+                        console.error("Error saving company: ", error);
+                        alert('خطا در ذخیره شرکت.');
+                    }
+                },
+
+
+                async deleteCompany(companyId) {
+                    // ... (کد بررسی وجود مخاطب در شرکت، مثل قبل باقی می‌ماند) ...
+                    this.showConfirmModal('حذف شرکت', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('companies').delete().eq('id', companyId);
+                            if (error) throw error;
+                        } catch (error) {
+                            console.error("Error deleting company: ", error);
+                        }
+                    });
+                },
+
+
+
+                generateProductsContent() {
+                    // Filter out any categories that are missing a name
+                    let categoryCircles = this.productCategories.filter(cat => cat && cat.name).map(category => {
+                        const deleteButton = this.currentUser.role === 'admin'
+                            ? `<button onclick="event.stopPropagation(); app.deleteCategory('${category.id}')" class="absolute top-0 right-0 text-xs text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center z-10" title="حذف گروه"><i class="fas fa-times"></i></button>`
+                            : '';
+
+                        return `
+            <div class="relative">
+                ${deleteButton}
+                <div class="category-circle" data-category-id="${category.id}" onclick="app.showProductsForCategory('${category.id}', this)">${category.name}</div>
+            </div>
+        `;
+                    }).join('');
+
+                    return `
+        <div class="card p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h3 class="text-xl font-bold text-gray-800">کاتالوگ محصولات</h3>
+                <button onclick="app.showCategoryFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                    <i class="fas fa-plus ml-2"></i>افزودن گروه
+                </button>
+            </div>
+            <p class="text-gray-600 mb-6">برای مشاهده محصولات، روی یکی از گروه‌های زیر کلیک کنید.</p>
+            <div id="categoryContainer" class="flex justify-center gap-8 flex-wrap p-4 bg-gray-50 rounded-lg">
+                ${categoryCircles.length > 0 ? categoryCircles : '<p class="text-gray-500">هنوز گروهی ثبت نشده است.</p>'}
+            </div>
+            <div id="productsContainer" class="mt-8"></div>
+        </div>`;
+                },
+
+
+
+                showProductsForCategory(categoryId, element) {
+                    if (element) {
+                        document.querySelectorAll('.category-circle').forEach(c => c.classList.remove('active'));
+                        element.classList.add('active');
+                    }
+                    const productsContainer = document.getElementById('productsContainer');
+                    const category = this.productCategories.find(c => c.id === categoryId);
+                    if (!category) {
+                        productsContainer.innerHTML = '';
+                        return;
+                    }
+
+                    // Filter out any products that are missing a name
+                    const categoryProducts = this.products.filter(p => p && p.name && p.categoryId === categoryId);
+
+                    let productItems = categoryProducts.map(product => {
+                        const adminButtons = this.currentUser.role === 'admin'
+                            ? `
+                <button onclick="event.stopPropagation(); app.showProductFormModal('${product.categoryId}', '${product.id}')" class="absolute top-1 right-1 text-xs text-blue-600 hover:text-blue-800 bg-white/70 rounded-full w-6 h-6 flex items-center justify-center" title="ویرایش"><i class="fas fa-edit"></i></button>
+                <button onclick="event.stopPropagation(); app.deleteProduct('${product.id}')" class="absolute top-1 left-1 text-xs text-red-600 hover:text-red-800 bg-white/70 rounded-full w-6 h-6 flex items-center justify-center" title="حذف"><i class="fas fa-trash"></i></button>
+            `
+                            : '';
+
+                        return `
+            <div class="flex flex-col items-center">
+                <div class="product-circle relative" onclick="app.showProductDetails('${product.id}')">
+                    ${product.name}
+                    ${adminButtons}
+                </div>
+                <p class="mt-2 text-sm font-bold text-gray-700">${this.formatPrice(product.price)}</p>
+            </div>
+        `;
+                    }).join('');
+
+                    productsContainer.innerHTML = `
+        <div class="border-t pt-6 mt-6">
+            <div class="flex justify-between items-center mb-6">
+                <h4 class="text-lg font-bold">محصولات گروه: <span class="text-blue-600">${category.name}</span></h4>
+                <button onclick="app.showProductFormModal('${categoryId}')" class="btn-primary px-4 py-2 rounded-md text-sm">
+                    <i class="fas fa-plus ml-2"></i>افزودن محصول
+                </button>
+            </div>
+            <div class="flex justify-center gap-6 flex-wrap">
+                ${productItems.length > 0 ? productItems : '<p class="text-gray-500 col-span-full text-center">هنوز محصولی در این گروه ثبت نشده است.</p>'}
+            </div>
+        </div>`;
+                },
+
+
+                showProductDetails(productId) {
+                    const product = this.products.find(p => p.id === productId);
+                    if (!product) return;
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="productDetailModal">
+                            <div class="modal-content max-w-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-bold text-gray-900">${product.name}</h3>
+                                    <button onclick="app.closeModal('productDetailModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                                </div>
+                                <div class="space-y-4">
+                                    <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-64 object-cover rounded-lg mb-4" onerror="this.src='https://placehold.co/400x400/cccccc/FFFFFF?text=No+Image'">
+                                    <div class="flex justify-between items-center">
+                                        <div><label class="font-bold text-sm text-gray-600">حجم:</label><p class="text-gray-800">${product.volume}</p></div>
+                                        <div><label class="font-bold text-sm text-gray-600">قیمت:</label><p class="text-green-600 font-bold text-lg">${this.formatPrice(product.price)}</p></div>
+                                    </div>
+                                    <div><label class="font-bold text-sm text-gray-600">توضیحات:</label><p class="text-gray-800 leading-relaxed">${product.description}</p></div>
+                                </div>
+                                <div class="mt-6 flex justify-end"><button onclick="app.closeModal('productDetailModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button></div>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                },
+
+
+
+                async saveCategory(formData) {
+                    const newCategory = { name: formData.get('name') };
+                    if (!newCategory.name) {
+                        alert('نام گروه نمی‌تواند خالی باشد.');
+                        return;
+                    }
+                    try {
+                        const { error } = await supabase.from('productCategories').insert([newCategory]);
+                        if (error) throw error;
+                        this.closeModal('categoryFormModal');
+                    } catch (error) {
+                        console.error("Error adding category: ", error);
+                        alert('خطا در افزودن گروه.');
+                    }
+                },
+
+                showProductFormModal(categoryId, productId = null) {
+                    const isEdit = productId !== null;
+                    const product = isEdit ? this.products.find(p => p.id === productId) : {};
+                    const title = isEdit ? 'ویرایش محصول' : 'افزودن محصول جدید';
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="productFormModal"><div class="modal-content"><form id="productForm">
+                            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('productFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm">عکس محصول</label>
+                                    <img id="imagePreview" src="${product.imageUrl || 'https://placehold.co/400x150/cccccc/FFFFFF?text=Select+Image'}" class="w-full h-40 object-cover rounded-md my-2 border">
+                                    <input name="image" type="file" accept="image/*" class="text-sm">
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><label class="block text-sm">نام محصول</label><input name="name" value="${product.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                    <div><label class="block text-sm">حجم</label><input name="volume" value="${product.volume || ''}" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                    <div><label class="block text-sm">قیمت (تومان)</label><input name="price" type="number" value="${product.price || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                </div>
+                                <div><label class="block text-sm">توضیحات</label><textarea name="description" rows="3" class="mt-1 w-full border border-gray-300 rounded-md p-2">${product.description || ''}</textarea></div>
+                            </div>
+                            <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('productFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
+                        </form></div></div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    const imageInput = document.querySelector('input[name="image"]');
+                    const imagePreview = document.getElementById('imagePreview');
+                    imageInput.onchange = () => {
+                        const file = imageInput.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => { imagePreview.src = e.target.result; };
+                            reader.readAsDataURL(file);
+                        }
+                    };
+
+                    document.getElementById('productForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveProduct(new FormData(e.target), categoryId, productId, imagePreview.src);
+                    };
+                },
+
+                async saveProduct(formData, categoryId, productId) {
+                    const productData = {
+                        name: formData.get('name'),
+                        volume: formData.get('volume'),
+                        price: parseInt(formData.get('price')) || 0,
+                        description: formData.get('description'),
+                        categoryId: categoryId
+                    };
+
+                    try {
+                        let response;
+                        if (productId) { // ویرایش
+                            response = await supabase.from('products').update(productData).eq('id', productId);
+                        } else { // افزودن
+                            response = await supabase.from('products').insert([productData]);
+                        }
+                        if (response.error) throw response.error;
+                        this.closeModal('productFormModal');
+                    } catch (error) {
+                        console.error("Error saving product:", error);
+                        alert('خطا در ذخیره محصول.');
+                    }
+                },
+
+                showCategoryFormModal() {
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="categoryFormModal">
+                            <div class="modal-content max-w-md">
+                                <form id="categoryForm">
+                                    <div class="flex justify-between items-center mb-6">
+                                        <h3 class="text-xl font-bold">افزودن گروه جدید</h3>
+                                        <button type="button" onclick="app.closeModal('categoryFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">نام گروه</label>
+                                        <input name="name" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                                    </div>
+                                    <div class="mt-6 flex justify-end gap-4">
+                                        <button type="button" onclick="app.closeModal('categoryFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    document.getElementById('categoryForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveCategory(new FormData(e.target));
+                    };
+                },
+
+                showOrderHistoryModal(contactId) {
+                    const contact = this.contacts.find(c => c.id === contactId);
+                    if (!contact) return;
+
+                    const orders = this.salesOrders.filter(o => o.contactId === contactId).sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+
+                    const orderRows = orders.map(order => {
+                        const itemsDetails = order.items.map(item => {
+                            const product = this.products.find(p => p.id === item.productId);
+                            return `<li>${product.name} - تعداد: ${item.quantity} - تخفیف: ${this.formatPrice(item.discount || 0)}</li>`;
+                        }).join('');
+
+                        return `
+                            <tr class="bg-white border-b">
+                                <td class="px-4 py-3">${this.formatDate(order.orderDate)}</td>
+                                <td class="px-4 py-3"><ul>${itemsDetails}</ul></td>
+                                <td class="px-4 py-3 font-bold">${this.formatPrice(order.totalPrice)}</td>
+                                <td class="px-4 py-3">${this.users[order.createdBy]?.name || ''}</td>
+                            </tr>`;
+                    }).join('');
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="historyModal">
+                            <div class="modal-content">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-bold text-gray-900">تاریخچه خرید: ${contact.name}</h3>
+                                    <button onclick="app.closeModal('historyModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                                </div>
+                                <div class="overflow-x-auto border rounded-lg max-h-[60vh]">
+                                    <table class="w-full text-sm text-right text-gray-500">
+                                        <thead class="text-xs text-gray-700 uppercase bg-gray-100 sticky top-0">
+                                            <tr>
+                                                <th scope="col" class="px-4 py-3">تاریخ</th>
+                                                <th scope="col" class="px-4 py-3">جزئیات خرید</th>
+                                                <th scope="col" class="px-4 py-3">مبلغ فاکتور</th>
+                                                <th scope="col" class="px-4 py-3">فروشنده</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${orderRows.length > 0 ? orderRows : '<tr><td colspan="4" class="text-center py-4 text-gray-500">تاریخچه خریدی برای این مخاطب وجود ندارد.</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-6 flex justify-end">
+                                    <button onclick="app.closeModal('historyModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                },
+                generateSalesContent() {
+                    let ordersToShow = this.salesOrders;
+                    // حسابدار فقط فروش‌های تکمیل شده را می‌بیند
+                    if (this.currentUser.role === 'accountant') {
+                        ordersToShow = this.salesOrders.filter(o => o.status === 'completed');
+                    }
+
+                    const tableRows = ordersToShow.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate)).map(order => {
+                        const contact = this.contacts.find(c => c.id === order.contactId);
+                        const salesperson = this.users[order.createdBy];
+                        const statusInfo = this.getPersianStatus(order.status);
+
+                        return `
+                            <tr class="bg-white border-b hover:bg-gray-50">
+                                <td class="px-6 py-4">#${order.id}</td>
+                                <td class="px-6 py-4">${contact ? contact.name : 'حذف شده'}</td>
+                                <td class="px-6 py-4">${salesperson ? salesperson.name : 'نامشخص'}</td>
+                                <td class="px-6 py-4">${this.formatDate(order.orderDate)}</td>
+                                <td class="px-6 py-4 font-bold">${this.formatPrice(order.totalPrice)}</td>
+                                <td class="px-6 py-4"><span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="card p-6">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-bold text-gray-800">تاریخچه فروش</h3>
+                                ${this.currentUser.role !== 'accountant' ? `<button onclick="app.showSaleFormModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>ثبت فروش جدید</button>` : ''}
+                            </div>
+                            <div class="overflow-x-auto border rounded-lg">
+                                <table class="w-full text-sm text-right">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                        <tr>
+                                            <th class="px-6 py-3">شماره</th>
+                                            <th class="px-6 py-3">خریدار</th>
+                                            <th class="px-6 py-3">فروشنده</th>
+                                            <th class="px-6 py-3">تاریخ</th>
+                                            <th class="px-6 py-3">مبلغ کل</th>
+                                            <th class="px-6 py-3">وضعیت</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="text-center py-4 text-gray-500">هیچ فروشی ثبت نشده است.</td></tr>'}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                },
+                showSaleFormModal(orderId = null) {
+                    const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name} - ${this.companies.find(co => co.id === c.companyId)?.name || 'بدون شرکت'}</option>`).join('');
+                    const productOptions = this.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="saleFormModal">
+                            <div class="modal-content">
+                                <form id="saleForm">
+                                    <div class="flex justify-between items-center mb-6">
+                                        <h3 class="text-xl font-bold text-gray-900">فاکتور فروش جدید</h3>
+                                        <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">نام خانوادگی (مشتری)</label>
+                                            <select name="contactId" id="saleContactSelect" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                                                <option value="" disabled selected>یک مخاطب را انتخاب کنید...</option>
+                                                ${contactOptions}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700">نام شرکت</label>
+                                            <input type="text" id="saleCompanyName" readonly class="mt-1 block w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-md">
+                                        </div>
+                                    </div>
+
+                                    <div class="border rounded-lg p-4 my-4">
+                                        <h4 class="font-bold mb-3">افزودن محصول</h4>
+                                        <div class="grid grid-cols-12 gap-2 items-end">
+                                            <div class="col-span-5"><label class="text-sm">جستجو محصول</label><select id="invoiceProduct" class="w-full mt-1 border border-gray-300 rounded-md p-2">${productOptions}</select></div>
+                                            <div class="col-span-2"><label class="text-sm">مقدار</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border border-gray-300 rounded-md p-2 text-center"></div>
+                                            <div class="col-span-3"><label class="text-sm">تخفیف (تومان)</label><input type="number" id="invoiceDiscount" value="0" min="0" class="w-full mt-1 border border-gray-300 rounded-md p-2 text-center"></div>
+                                            <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
+                                        </div>
+                                    </div>
+
+                                    <h4 class="font-bold mb-2">لیست محصولات فاکتور</h4>
+                                    <div class="border rounded-lg max-h-48 overflow-y-auto">
+                                        <table class="w-full text-sm">
+                                            <thead class="bg-gray-100 text-xs text-gray-700 uppercase"><tr class="text-right"><th class="p-2">ردیف</th><th class="p-2">عنوان</th><th class="p-2">مقدار</th><th class="p-2">مبلغ واحد</th><th class="p-2">تخفیف</th><th class="p-2">مبلغ نهایی</th><th class="p-2"></th></tr></thead>
+                                            <tbody id="invoiceItemsTable">
+                                                <tr><td colspan="7" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="bg-gray-100 p-2 rounded-md mt-2 flex justify-between items-center text-sm font-bold">
+                                        <div>مجموع تعداد محصولات: <span id="invoiceTotalQuantity">۰</span></div>
+                                        <div>جمع مبلغ: <span id="invoiceTotalAmount">۰ تومان</span></div>
+                                    </div>
+
+                                    <div class="mt-6 flex justify-end gap-4">
+                                        <button type="button" onclick="app.closeModal('saleFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ثبت فاکتور</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    this.setupSaleFormListeners();
+                },
+
+                setupSaleFormListeners() {
+                    let invoiceItems = [];
+                    const contactSelect = document.getElementById('saleContactSelect');
+                    const companyNameInput = document.getElementById('saleCompanyName');
+                    const addProductBtn = document.getElementById('addProductBtn');
+                    const invoiceItemsTable = document.getElementById('invoiceItemsTable');
+                    const totalQuantitySpan = document.getElementById('invoiceTotalQuantity');
+                    const totalAmountSpan = document.getElementById('invoiceTotalAmount');
+                    const saleForm = document.getElementById('saleForm');
+
+                    contactSelect.onchange = (e) => {
+                        const contactId = e.target.value; // No parseInt
+                        const contact = this.contacts.find(c => c.id === contactId);
+                        const company = this.companies.find(c => c.id === contact?.companyId);
+                        companyNameInput.value = company ? company.name : '---';
+                    };
+
+                    const renderInvoiceItems = () => {
+                        if (invoiceItems.length === 0) {
+                            invoiceItemsTable.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr>';
+                            totalQuantitySpan.textContent = '۰';
+                            totalAmountSpan.textContent = '۰ تومان';
+                            return;
+                        }
+
+                        let totalQuantity = 0;
+                        let totalAmount = 0;
+
+                        invoiceItemsTable.innerHTML = invoiceItems.map((item, index) => {
+                            const product = this.products.find(p => p.id === item.productId);
+                            if (!product) return ''; // Skip if product not found
+                            const itemTotal = (item.price * item.quantity) - item.discount;
+                            totalQuantity += item.quantity;
+                            totalAmount += itemTotal;
+                            return `
+                <tr class="border-b text-right">
+                    <td class="p-2">${index + 1}</td>
+                    <td class="p-2">${product.name}</td>
+                    <td class="p-2">${item.quantity} عدد</td>
+                    <td class="p-2">${this.formatPrice(item.price)}</td>
+                    <td class="p-2">${this.formatPrice(item.discount)}</td>
+                    <td class="p-2 font-bold">${this.formatPrice(itemTotal)}</td>
+                    <td class="p-2 text-center"><button type="button" onclick="app.removeInvoiceItem(${index})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
+                </tr>
+            `;
+                        }).join('');
+
+                        totalQuantitySpan.textContent = new Intl.NumberFormat('fa-IR').format(totalQuantity);
+                        totalAmountSpan.textContent = this.formatPrice(totalAmount);
+                    };
+
+                    window.app.removeInvoiceItem = (index) => {
+                        invoiceItems.splice(index, 1);
+                        renderInvoiceItems();
+                    };
+
+                    addProductBtn.onclick = () => {
+                        // The fix is here: parseInt is removed from productId
+                        const productId = document.getElementById('invoiceProduct').value;
+                        const quantity = parseInt(document.getElementById('invoiceQuantity').value);
+                        const discount = parseInt(document.getElementById('invoiceDiscount').value) || 0;
+                        if (!productId || !quantity || quantity < 1) return;
+
+                        const product = this.products.find(p => p.id === productId);
+                        if (!product) {
+                            alert('محصول انتخاب شده یافت نشد.');
+                            return;
+                        }
+
+                        const existingItemIndex = invoiceItems.findIndex(item => item.productId === productId);
+                        if (existingItemIndex > -1) {
+                            alert('این محصول قبلاً اضافه شده است. برای تغییر، آن را حذف و دوباره اضافه کنید.');
+                            return;
+                        }
+
+                        invoiceItems.push({ productId, quantity, price: product.price, discount });
+                        renderInvoiceItems();
+                    };
+
+                    saleForm.onsubmit = (e) => {
+                        e.preventDefault();
+                        const contactId = contactSelect.value;
+                        if (!contactId || invoiceItems.length === 0) {
+                            alert('لطفا مشتری را انتخاب کرده و حداقل یک محصول به فاکتور اضافه کنید.');
+                            return;
+                        }
+                        this.saveSale(contactId, invoiceItems);
+                    };
+                },
+
+
+
+                async saveSale(contactId, items) {
+                    const totalPrice = items.reduce((sum, item) => sum + (item.quantity * item.price) - item.discount, 0);
+                    const newOrder = {
+                        contactId: contactId,
+                        items: items, // Supabase می‌تواند JSON را ذخیره کند
+                        totalPrice: totalPrice,
+                        status: 'pending_manager_approval',
+                        createdBy: this.currentUser.id,
+                        orderDate: new Date().toISOString().split('T')[0]
+                    };
+
+                    try {
+                        const { error: saleError } = await supabase.from('salesOrders').insert([newOrder]);
+                        if (saleError) throw saleError;
+
+                        // آپدیت وضعیت مخاطب به "مشتری"
+                        const { error: contactError } = await supabase.from('contacts').update({ status: 'مشتری' }).eq('id', contactId);
+                        if (contactError) throw contactError;
+
+                        this.closeModal('saleFormModal');
+                        alert('فروش با موفقیت ثبت و برای تایید مدیر ارسال شد.');
+                    } catch (error) {
+                        console.error("Error saving sale: ", error);
+                        alert('خطا در ثبت فروش.');
+                    }
+                },
+
+
+
+
+
+                showContactDetails(contactId) {
+                    const contact = this.contacts.find(c => c.id === contactId);
+                    if (!contact) return;
+                    const modalHTML = `<div class="modal-backdrop" id="contactModal"><div class="modal-content"><div class="flex justify-between items-center mb-4"><h3 class="text-xl font-bold text-gray-900">اطلاعات: ${contact.name}</h3><button onclick="app.closeModal('contactModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div><div class="space-y-4"><div><label class="font-bold text-sm text-gray-600">ایمیل:</label><p class="text-gray-800">${contact.email || '-'}</p></div><div><label class="font-bold text-sm text-gray-600">تلفن:</label><p class="text-gray-800">${contact.phone}</p></div><div><label class="font-bold text-sm text-gray-600">یادداشت‌ها:</label><p class="text-gray-800 leading-relaxed">${contact.details || '-'}</p></div></div><div class="mt-6 flex justify-end"><button onclick="app.closeModal('contactModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button></div></div></div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                },
+
+                showContactFormModal(contactId = null) {
+                    const isEdit = contactId !== null;
+                    const contact = isEdit ? this.contacts.find(c => c.id === contactId) : {};
+                    const title = isEdit ? 'ویرایش مخاطب' : 'افزودن مخاطب جدید';
+
+                    const companyOptions = this.companies.map(c => `<option value="${c.id}" ${contact.companyId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+
+                    let statusOptions = '';
+
+                    // If the contact is already a customer, lock the status.
+                    if (contact.status === 'مشتری') {
+                        statusOptions = `<option value="مشتری" selected>مشتری (غیرقابل تغییر)</option>`;
+                    } else {
+                        // Otherwise, show the standard lead statuses.
+                        statusOptions = `
+            <option value="سرنخ جدید" ${!contact.status || contact.status === 'سرنخ جدید' ? 'selected' : ''}>سرنخ جدید</option>
+            <option value="مذاکره اولیه" ${contact.status === 'مذاکره اولیه' ? 'selected' : ''}>مذاکره اولیه</option>
+            <option value="در حال مذاکره" ${contact.status === 'در حال مذاکره' ? 'selected' : ''}>در حال مذاکره</option>
+        `;
+                        // ONLY if the user is an admin, add the option to manually set as "Customer".
+                        if (this.currentUser.role === 'admin') {
+                            statusOptions += `<option value="مشتری">مشتری</option>`;
+                        }
+                    }
+
+
+                    const modalHTML = `
+        <div class="modal-backdrop" id="contactFormModal">
+            <div class="modal-content">
+                <form id="contactForm">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-900">${title}</h3><button type="button" onclick="app.closeModal('contactFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700">نام کامل</label><input name="name" type="text" value="${contact.name || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">شرکت</label><select name="companyId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">بدون شرکت</option>${companyOptions}</select></div>
+                        <div><label class="block text-sm font-medium text-gray-700">شماره تلفن</label><input name="phone" type="tel" value="${contact.phone || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                        <div><label class="block text-sm font-medium text-gray-700">وضعیت</label><select name="status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" ${contact.status === 'مشتری' ? 'disabled' : ''}>${statusOptions}</select></div>
+                        <div><label class="block text-sm font-medium text-gray-700">یادداشت</label><textarea name="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${contact.details || ''}</textarea></div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" onclick="app.closeModal('contactFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    document.getElementById('contactForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveContact(e.target, contactId);
+                    };
+                },
+                async sendMessage(formData) {
+                    const newMessage = {
+                        type: 'general',
+                        sender: this.currentUser.id, // بهتر است از ID استفاده کنید
+                        recipient: formData.get('recipient'),
+                        subject: formData.get('subject'),
+                        body: formData.get('body'),
+                        timestamp: new Date().toISOString(),
+                        read: false
+                    };
+
+                    try {
+                        // کد صحیح با Supabase
+                        const { error } = await supabase.from('messages').insert([newMessage]);
+                        if (error) throw error;
+
+                        this.closeModal('composeModal');
+                        alert('پیام شما با موفقیت ارسال شد.');
+                    } catch (error) {
+                        console.error("Error sending message: ", error);
+                        alert('خطا در ارسال پیام.');
+                    }
+                },
+
+
+
+                async saveContact(form, contactId) {
+                    const formData = new FormData(form);
+                    const contactData = {
+                        name: formData.get('name'),
+                        phone: formData.get('phone'),
+                        companyId: formData.get('companyId') || null,
+                        details: formData.get('details'),
+                        status: formData.get('status') || 'سرنخ جدید',
+                    };
+
+                    try {
+                        let response;
+                        if (contactId) { // ویرایش
+                            response = await supabase.from('contacts').update(contactData).eq('id', contactId);
+                        } else { // افزودن
+                            contactData.createdBy = this.currentUser.id;
+                            response = await supabase.from('contacts').insert([contactData]);
+                        }
+                        if (response.error) throw response.error;
+                        this.closeModal('contactFormModal');
+                    } catch (error) {
+                        console.error("Error saving contact: ", error);
+                        alert('خطا در ذخیره مخاطب.');
+                    }
+                },
+
+                async deleteContact(contactId) {
+                    // ... (کد بررسی وجود فاکتور برای مخاطب، مثل قبل باقی می‌ماند) ...
+                    this.showConfirmModal('حذف مخاطب', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('contacts').delete().eq('id', contactId);
+                            if (error) throw error;
+                        } catch (error) {
+                            console.error("Error deleting contact: ", error);
+                        }
+                    });
+                },
+
+                async deleteCategory(categoryId) {
+                    // ... (کد نمایش پیام هشدار مثل قبل باقی می‌ماند) ...
+                    this.showConfirmModal('حذف گروه', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            // ابتدا محصولات مرتبط را حذف می‌کنیم
+                            const { error: productError } = await supabase.from('products').delete().eq('categoryId', categoryId);
+                            if (productError) throw productError;
+
+                            // سپس خود گروه را حذف می‌کنیم
+                            const { error: categoryError } = await supabase.from('productCategories').delete().eq('id', categoryId);
+                            if (categoryError) throw categoryError;
+                        } catch (error) {
+                            console.error("Error deleting category: ", error);
+                        }
+                    });
+                },
+                generateMessagesContent() {
+                    // --- بخش تایید مدیر ---
+                    let managerApprovalSection = '';
+                    if (this.currentUser.role === 'admin') {
+                        const pendingFirstApproval = this.salesOrders.filter(o => o.status === 'pending_manager_approval');
+                        const pendingFinalApproval = this.salesOrders.filter(o => o.status === 'initial_approval');
+
+                        const createApprovalRow = (order, isFinalStage) => {
+                            const contact = this.contacts.find(c => c.id === order.contactId);
+                            const salesperson = this.users[order.createdBy];
+                            const actionButton = `<button onclick="app.${isFinalStage ? 'approveSaleFinalStage' : 'approveSaleFirstStage'}(${order.id})" class="btn-primary px-3 py-1 text-xs">بررسی و تایید</button>`;
+
+                            return `
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-4 py-3">#${order.id}</td>
+                                    <td class="px-4 py-3">${salesperson.name}</td>
+                                    <td class="px-4 py-3">${contact.name}</td>
+                                    <td class="px-4 py-3 font-bold">${this.formatPrice(order.totalPrice)}</td>
+                                    <td class="px-4 py-3 text-left">${actionButton}</td>
+                                </tr>`;
+                        };
+
+                        managerApprovalSection = `
+                            <div class="mb-8">
+                                <h4 class="text-lg font-bold mb-3 text-red-600">تایید مرحله اول فروش (${pendingFirstApproval.length} مورد)</h4>
+                                <div class="overflow-x-auto border rounded-lg">
+                                    <table class="w-full text-sm text-right">
+                                        <thead class="bg-gray-100 text-xs"><tr><th class="px-4 py-2">شماره</th><th class="px-4 py-2">فروشنده</th><th class="px-4 py-2">مشتری</th><th class="px-4 py-2">مبلغ</th><th class="px-4 py-2"></th></tr></thead>
+                                        <tbody>${pendingFirstApproval.map(o => createApprovalRow(o, false)).join('') || '<tr><td colspan="5" class="text-center p-4 text-gray-500">موردی برای تایید وجود ندارد.</td></tr>'}</tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="mb-8">
+                                <h4 class="text-lg font-bold mb-3 text-blue-600">تایید مرحله پایان معامله (${pendingFinalApproval.length} مورد)</h4>
+                                 <div class="overflow-x-auto border rounded-lg">
+                                    <table class="w-full text-sm text-right">
+                                        <thead class="bg-gray-100 text-xs"><tr><th class="px-4 py-2">شماره</th><th class="px-4 py-2">فروشنده</th><th class="px-4 py-2">مشتری</th><th class="px-4 py-2">مبلغ</th><th class="px-4 py-2"></th></tr></thead>
+                                        <tbody>${pendingFinalApproval.map(o => createApprovalRow(o, true)).join('') || '<tr><td colspan="5" class="text-center p-4 text-gray-500">موردی برای تایید وجود ندارد.</td></tr>'}</tbody>
+                                    </table>
+                                </div>
+                            </div>`;
+                    }
+
+                    // --- بخش صندوق ورودی پیام‌های عمومی ---
+                    const receivedMessages = this.messages
+                        .filter(m => m.recipient === this.currentUser.username && m.type !== 'approval_request')
+                        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                    let messageRows = receivedMessages.map(msg => {
+                        const sender = this.users[msg.sender];
+                        const isUnread = !msg.read ? 'font-bold bg-blue-50' : 'text-gray-600';
+                        return `
+                            <tr class="cursor-pointer hover:bg-gray-100 ${isUnread}" onclick="app.showMessageDetailsModal(${msg.id})">
+                                <td class="px-6 py-4">${sender.name}</td>
+                                <td class="px-6 py-4">${msg.subject}</td>
+                                <td class="px-6 py-4 text-sm whitespace-nowrap">${new Date(msg.timestamp).toLocaleDateString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</td>
+                            </tr>`;
+                    }).join('');
+
+                    return `
+                        <div class="card p-6">
+                            ${managerApprovalSection}
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                                <h3 class="text-xl font-bold text-gray-800">صندوق ورودی پیام‌ها</h3>
+                                <button onclick="app.showComposeMessageModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                                    <i class="fas fa-paper-plane ml-2"></i>ارسال پیام جدید
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border rounded-lg">
+                                <table class="w-full text-sm text-right">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3">فرستنده</th>
+                                            <th scope="col" class="px-6 py-3">موضوع</th>
+                                            <th scope="col" class="px-6 py-3">تاریخ دریافت</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${messageRows.length > 0 ? messageRows : '<tr><td colspan="3" class="text-center py-4 text-gray-500">هیچ پیامی دریافت نشده است.</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>`;
+                },
+
+                showMessageDetailsModal(messageId) {
+                    const messageIndex = this.messages.findIndex(m => m.id === messageId);
+                    if (messageIndex === -1) return;
+
+                    this.messages[messageIndex].read = true; // Mark as read
+                    const message = this.messages[messageIndex];
+                    const sender = this.users[message.sender];
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="messageDetailModal">
+                            <div class="modal-content max-w-lg">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-xl font-bold text-gray-900">${message.subject}</h3>
+                                    <button onclick="app.closeModal('messageDetailModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                                </div>
+                                <div class="border-b pb-3 mb-3">
+                                    <p class="text-sm"><strong>از:</strong> ${sender.name}</p>
+                                    <p class="text-sm text-gray-500"><strong>تاریخ:</strong> ${new Date(message.timestamp).toLocaleString('fa-IR')}</p>
+                                </div>
+                                <p class="text-gray-800 leading-relaxed whitespace-pre-wrap">${message.body}</p>
+                                <div class="mt-6 flex justify-end">
+                                    <button onclick="app.closeModal('messageDetailModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    this.refreshCurrentPage(); // Refresh to update read status visually
+                },
+
+                showComposeMessageModal() {
+                    const recipientOptions = Object.keys(this.users)
+                        .filter(username => username !== this.currentUser.username)
+                        .map(username => `<option value="${username}">${this.users[username].name}</option>`)
+                        .join('');
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="composeModal">
+                            <div class="modal-content">
+                                <form id="composeForm">
+                                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">ارسال پیام جدید</h3><button type="button" onclick="app.closeModal('composeModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                                    <div class="space-y-4">
+                                        <div><label class="block text-sm">گیرنده</label><select name="recipient" required class="mt-1 w-full border border-gray-300 rounded-md p-2">${recipientOptions}</select></div>
+                                        <div><label class="block text-sm">موضوع</label><input name="subject" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                        <div><label class="block text-sm">متن پیام</label><textarea name="body" rows="5" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></textarea></div>
+                                    </div>
+                                    <div class="mt-6 flex justify-end gap-4">
+                                        <button type="button" onclick="app.closeModal('composeModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ارسال</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    document.getElementById('composeForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.sendMessage(new FormData(e.target));
+                    };
+                },
+
+
+
+                deleteCategory(categoryId) {
+                    const category = this.productCategories.find(c => c.id === categoryId);
+                    if (!category) return;
+                    const productsInCategory = this.products.filter(p => p.categoryId === categoryId);
+                    let message = `آیا از حذف گروه "${category.name}" اطمینان دارید؟`;
+                    if (productsInCategory.length > 0) {
+                        message += `\n\nتوجه: ${productsInCategory.length} محصول مرتبط نیز حذف خواهند شد.`;
+                    }
+
+                    this.showConfirmModal('حذف گروه محصول', message, async () => {
+                        try {
+                            // Note: In a real app, you'd use a batch write to delete products and category together.
+                            for (const product of productsInCategory) {
+                                await fb.deleteDoc(fb.doc(db, "products", product.id));
+                            }
+                            await fb.deleteDoc(fb.doc(db, "productCategories", categoryId));
+                            console.log("Category and its products deleted.");
+                        } catch (error) {
+                            console.error("Error deleting category: ", error);
+                        }
+                    });
+                },
+
+                async deleteProduct(productId) {
+                    this.showConfirmModal('حذف محصول', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('products').delete().eq('id', productId);
+                            if (error) throw error;
+                        } catch (error) {
+                            console.error("Error deleting product:", error);
+                        }
+                    });
+                },
+
+                // تایید اولیه فروش
+                async approveSaleFirstStage(orderId) {
+                    this.showConfirmModal('تایید اولیه', 'آیا تایید می‌کنید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('salesOrders').update({ status: 'initial_approval' }).eq('id', orderId);
+                            if (error) throw error;
+                            alert('فروش تایید اولیه شد.');
+                        } catch (error) {
+                            console.error("Error updating sale status: ", error);
+                        }
+                    });
+                },
+
+                // تایید نهایی فروش
+                async approveSaleFinalStage(orderId) {
+                    this.showConfirmModal('تایید نهایی', 'آیا معامله را تکمیل می‌کنید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('salesOrders').update({ status: 'completed' }).eq('id', orderId);
+                            if (error) throw error;
+                            alert('معامله تکمیل شد.');
+                        } catch (error) {
+                            console.error("Error updating sale status: ", error);
+                        }
+                    });
+                },
+                async showMessageDetailsModal(messageId) {
+                    const message = this.messages.find(m => m.id === messageId);
+                    if (!message) return;
+
+                    if (!message.read) {
+                        try {
+                            const { error } = await supabase.from('messages').update({ read: true }).eq('id', messageId);
+                            if (error) throw error;
+                        } catch (error) {
+                            console.error("Error updating message read status:", error);
+                        }
+                    }
+
+                    const modalHTML = `
+        <div class="modal-backdrop" id="messageDetailModal">
+            <div class="modal-content max-w-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-900">${message.subject}</h3>
+                    <button onclick="app.closeModal('messageDetailModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                <div class="border-b pb-3 mb-3">
+                    <p class="text-sm"><strong>از:</strong> ${sender ? sender.name : 'کاربر حذف شده'}</p>
+                    <p class="text-sm text-gray-500"><strong>تاریخ:</strong> ${new Date(message.timestamp).toLocaleString('fa-IR')}</p>
+                </div>
+                <p class="text-gray-800 leading-relaxed whitespace-pre-wrap">${message.body}</p>
+                <div class="mt-6 flex justify-end">
+                    <button onclick="app.closeModal('messageDetailModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button>
+                </div>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                },
+                // تغییر وضعیت چک
+                async updateChequeStatus(chequeId, newStatus) {
+                    try {
+                        const { error } = await supabase.from('cheques').update({ status: newStatus }).eq('id', chequeId);
+                        if (error) throw error;
+                    } catch (error) {
+                        console.error("Error updating cheque status:", error);
+                    }
+                },
+
+                showComposeMessageModal() {
+                    const recipientOptions = Object.keys(this.users)
+                        .filter(username => username !== this.currentUser.username)
+                        .map(username => `<option value="${username}">${this.users[username].name}</option>`)
+                        .join('');
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="composeModal">
+                            <div class="modal-content">
+                                <form id="composeForm">
+                                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">ارسال پیام جدید</h3><button type="button" onclick="app.closeModal('composeModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                                    <div class="space-y-4">
+                                        <div><label class="block text-sm">گیرنده</label><select name="recipient" required class="mt-1 w-full border border-gray-300 rounded-md p-2">${recipientOptions}</select></div>
+                                        <div><label class="block text-sm">موضوع</label><input name="subject" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                        <div><label class="block text-sm">متن پیام</label><textarea name="body" rows="5" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></textarea></div>
+                                    </div>
+                                    <div class="mt-6 flex justify-end gap-4">
+                                        <button type="button" onclick="app.closeModal('composeModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ارسال</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    document.getElementById('composeForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.sendMessage(new FormData(e.target));
+                    };
+                },
+
+                sendMessage(formData) {
+                    const newMessage = {
+                        id: Date.now(),
+                        type: 'general', // نوع پیام عمومی
+                        sender: this.currentUser.username,
+                        recipient: formData.get('recipient'),
+                        subject: formData.get('subject'),
+                        body: formData.get('body'),
+                        timestamp: new Date().toISOString(),
+                        read: false
+                    };
+                    this.messages.push(newMessage);
+                    this.closeModal('composeModal');
+                    alert('پیام شما با موفقیت ارسال شد.');
+                },
+
+                closeModal(modalId) { const modal = document.getElementById(modalId); if (modal) { modal.remove(); } },
+                showConfirmModal(title, message, onConfirm) {
+                    const modalId = 'confirmModal';
+                    const modalHTML = `
+        <div class="modal-backdrop" id="${modalId}">
+            <div class="modal-content max-w-sm text-center">
+                <h3 class="text-xl font-bold text-gray-900 mb-2">${title}</h3>
+                <p class="text-gray-600 mb-6">${message}</p>
+                <div class="flex justify-center gap-4 confirm-modal-buttons">
+                    <button id="confirmCancelBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800">لغو</button>
+                    <button id="confirmOkBtn" class="bg-red-600 hover:bg-red-700 text-white">تایید و حذف</button>
+                </div>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    document.getElementById('confirmOkBtn').onclick = () => {
+                        onConfirm(); // تابعی که موقع تایید باید اجرا بشه
+                        this.closeModal(modalId);
+                    };
+                    document.getElementById('confirmCancelBtn').onclick = () => {
+                        this.closeModal(modalId);
+                    };
+                },
+
+                // --- Restored Dummy Pages ---
+                generateUserManagementContent() {
+                    if (this.currentUser.role !== 'admin') {
+                        return '<div class="card p-6 text-red-600">شما دسترسی به این بخش را ندارید.</div>';
+                    }
+
+                    const userRows = Object.keys(this.users).filter(username => this.users[username] && this.users[username].name).map(username => {
+                        const user = this.users[username];
+                        const roleMap = { admin: 'مدیر', sales: 'کارشناس فروش', accountant: 'حسابدار' };
+
+                        // Admin اصلی قابل حذف یا ویرایش نیست
+                        const actionButtons = username === 'admin'
+                            ? '<span class="text-gray-400">غیرقابل تغییر</span>'
+                            : `
+                                <button onclick="app.showUserFormModal('${username}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-edit"></i> ویرایش</button>
+                                <button onclick="app.deleteUser('${username}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+                            `;
+
+                        return `
+                            <tr class="bg-white border-b">
+                                <td class="px-6 py-4">${user.name}</td>
+                                <td class="px-6 py-4">${username}</td>
+                                <td class="px-6 py-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">${roleMap[user.role] || user.role}</span></td>
+                                <td class="px-6 py-4 text-left">${actionButtons}</td>
+                            </tr>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="card p-6">
+                            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                                <h3 class="text-xl font-bold text-gray-800">مدیریت کاربران سیستم</h3>
+                                <button onclick="app.showUserFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                                    <i class="fas fa-plus ml-2"></i>افزودن کاربر جدید
+                                </button>
+                            </div>
+                            <div class="overflow-x-auto border rounded-lg">
+                                <table class="w-full text-sm text-right text-gray-500">
+                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3">نام کامل</th>
+                                            <th scope="col" class="px-6 py-3">نام کاربری</th>
+                                            <th scope="col" class="px-6 py-3">نقش</th>
+                                            <th scope="col" class="px-6 py-3 text-left">عملیات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${userRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    `;
+                },
+                generateTasksContent() { return `<div class="card p-6">اینجا صفحه مدیریت **وظایف** برای کارشناس فروش است.</div>`; },
+                showUserFormModal(username = null) {
+                    const isEdit = username !== null;
+                    const user = isEdit ? this.users[username] : {};
+                    const title = isEdit ? `ویرایش کاربر: ${username}` : 'افزودن کاربر جدید';
+
+                    const modalHTML = `
+                        <div class="modal-backdrop" id="userFormModal">
+                            <div class="modal-content max-w-lg">
+                                <form id="userForm">
+                                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('userFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                                    <div class="space-y-4">
+                                        <div><label class="block text-sm">نام کامل</label><input name="name" value="${user.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                        <div><label class="block text-sm">نقش</label>
+                                            <select name="role" required class="mt-1 w-full border border-gray-300 rounded-md p-2">
+                                                <option value="sales" ${user.role === 'sales' ? 'selected' : ''}>کارشناس فروش</option>
+                                                <option value="accountant" ${user.role === 'accountant' ? 'selected' : ''}>حسابدار</option>
+                                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>مدیر</option>
+                                            </select>
+                                        </div>
+                                        <hr/>
+                                        <div><label class="block text-sm">نام کاربری (فقط حروف انگلیسی)</label><input name="username" value="${username || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
+                                        <div><label class="block text-sm">رمز عبور ${isEdit ? '(در صورت خالی بودن، تغییر نمی‌کند)' : ''}</label><input name="password" type="password" ${!isEdit ? 'required' : ''} class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                                    </div>
+                                    <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('userFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
+                                </form>
+                            </div>
+                        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                    document.getElementById('userForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveUser(new FormData(e.target), username);
+                    };
+                },
+
+                async saveUser(formData, existingUsername) {
+                    const username = existingUsername || formData.get('username');
+                    const password = formData.get('password');
+
+                    const userData = {
+                        name: formData.get('name'),
+                        role: formData.get('role'),
+                        username: username
+                    };
+
+                    if (password) {
+                        userData.password = password;
+                    }
+
+                    try {
+                        let response;
+                        if (existingUsername) { // ویرایش
+                            response = await supabase.from('users').update(userData).eq('username', existingUsername);
+                        } else { // افزودن
+                            response = await supabase.from('users').insert([userData]);
+                        }
+                        if (response.error) throw response.error;
+                        this.closeModal('userFormModal');
+                        alert(`کاربر ${username} با موفقیت ${existingUsername ? 'ویرایش' : 'ایجاد'} شد.`);
+                    } catch (err) {
+                        console.error("Error saving user: ", err);
+                        alert('خطا در ذخیره کاربر.');
+                    }
+                },
+
+                async deleteUser(username) {
+                    // ... (کد بررسی‌ها مثل قبل باقی می‌ماند) ...
+                    this.showConfirmModal('حذف کاربر', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('users').delete().eq('username', username);
+                            if (error) throw error;
+                            alert('کاربر با موفقیت حذف شد.');
+                        } catch (error) {
+                            console.error("Error deleting user:", error);
+                        }
+                    });
+                },
+                generateChequesContent() {
+                    // اطمینان از اینکه فقط مدیر به این صفحه دسترسی دارد
+                    if (this.currentUser.role !== 'admin') {
+                        return '<div class="card p-6 text-red-600">شما دسترسی به این بخش را ندارید.</div>';
+                    }
+                    // با یک تاخیر کوتاه، توابع رندر را صدا می‌زنیم تا مطمئن شویم HTML آماده است
+                    setTimeout(() => {
+                        this.renderChequeCalendar();
+                        this.renderChequeHistory();
+                    }, 0);
+
+                    return `
+        <div class="space-y-6">
+            <!-- بخش تقویم -->
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <button onclick="app.changeMonth(-1)" class="p-2 rounded-md hover:bg-gray-100"><i class="fas fa-chevron-right"></i></button>
+                    <h3 id="calendar-month-year" class="text-xl font-bold"></h3>
+                    <button onclick="app.changeMonth(1)" class="p-2 rounded-md hover:bg-gray-100"><i class="fas fa-chevron-left"></i></button>
+                </div>
+                <div id="cheque-calendar-container"></div>
+            </div>
+
+            <!-- بخش تاریخچه چک‌ها -->
+            <div class="card p-6">
+                 <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                    <h3 class="text-xl font-bold text-gray-800">تاریخچه چک‌ها</h3>
+                    <button onclick="app.showChequeFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                        <i class="fas fa-plus ml-2"></i>افزودن چک جدید
+                    </button>
+                </div>
+                <div id="cheque-history-container" class="overflow-x-auto border rounded-lg">
+                    <!-- تاریخچه توسط تابع renderChequeHistory در اینجا ساخته می‌شود -->
+                </div>
+            </div>
+        </div>
+    `;
+                },
+                renderChequeHistory() {
+                    const container = document.getElementById('cheque-history-container');
+                    if (!container) return;
+
+                    const sortedCheques = [...this.cheques].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+                    const getStatusInfo = (status) => {
+                        switch (status) {
+                            case 'pending': return { text: 'ثبت شده', color: 'bg-gray-200 text-gray-800', nextStatus: 'pending_clearance' };
+                            case 'pending_clearance': return { text: 'در انتظار وصول', color: 'bg-yellow-200 text-yellow-800', nextStatus: 'cleared' };
+                            case 'cleared': return { text: 'پاس شده', color: 'bg-green-200 text-green-800', nextStatus: null };
+                            default: return { text: 'نامشخص', color: 'bg-gray-200', nextStatus: 'pending_clearance' };
+                        }
+                    };
+
+                    const tableRows = sortedCheques.map(cheque => {
+                        const statusInfo = getStatusInfo(cheque.status);
+                        const typeText = cheque.type === 'payable' ? 'پرداختی' : 'دریافتی';
+                        const typeColor = cheque.type === 'payable' ? 'text-blue-600' : 'text-green-600';
+
+                        const approveButton = statusInfo.nextStatus
+                            ? `<button onclick="app.updateChequeStatus('${cheque.id}', '${statusInfo.nextStatus}')" class="font-medium text-green-600 hover:underline"><i class="fas fa-check"></i> تایید</button>`
+                            : `<span class="font-medium text-gray-400"><i class="fas fa-check-double"></i> تکمیل</span>`;
+
+                        // --- اصلاح کلیدی اینجاست ---
+                        // ما به moment می‌گوییم که cheque.dueDate یک تاریخ میلادی با فرمت YYYY-MM-DD است
+                        const displayDate = moment(cheque.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD');
+
+                        return `
+            <tr class="bg-white border-b hover:bg-gray-50">
+                <td class="px-4 py-3 cursor-pointer hover:text-blue-600 hover:font-bold" onclick="app.jumpToChequeDate('${cheque.dueDate}')">${displayDate}</td>
+                <td class="px-4 py-3 font-bold ${typeColor}">${typeText}</td>
+                <td class="px-4 py-3 font-bold">${this.formatPrice(cheque.amount)}</td>
+                <td class="px-4 py-3">${cheque.from} به ${cheque.to}</td>
+                <td class="px-4 py-3"><span class="text-xs font-medium px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
+                <td class="px-4 py-3 text-left">
+                    ${approveButton}
+                    <button onclick="app.showChequeFormModal('${cheque.id}')" class="font-medium text-blue-600 hover:underline mr-4"><i class="fas fa-edit"></i> ویرایش</button>
+                    <button onclick="app.deleteCheque('${cheque.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+                </td>
+            </tr>
+        `;
+                    }).join('');
+
+                    container.innerHTML = `
+        <table class="w-full text-sm text-right">
+            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                <tr>
+                    <th class="px-4 py-3">تاریخ سررسید</th>
+                    <th class="px-4 py-3">نوع</th>
+                    <th class="px-4 py-3">مبلغ</th>
+                    <th class="px-4 py-3">توضیح</th>
+                    <th class="px-4 py-3">وضعیت</th>
+                    <th class="px-4 py-3 text-left">عملیات</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${sortedCheques.length > 0 ? tableRows : '<tr><td colspan="6" class="text-center py-4 text-gray-500">هیچ چکی ثبت نشده است.</td></tr>'}
+            </tbody>
+        </table>
+    `;
+                },
+                generateReportsContent() { return `<div class="card p-6">اینجا صفحه **گزارشات** (تحلیل) برای مدیر است.</div>`; },
+                generateSettingsContent() { return `<div class="card p-6">اینجا صفحه **تنظیمات** برای مدیر است.</div>`; },
+
+
+                changeMonth(direction) {
+                    this.currentCalendarDate.jMonth(this.currentCalendarDate.jMonth() + direction);
+                    this.renderChequeCalendar();
+                },
+                jumpToChequeDate(gregorianDate) {
+                    // تاریخ تقویم را به تاریخ چک مورد نظر تغییر می‌دهد
+                    this.currentCalendarDate = moment(gregorianDate);
+                    // تقویم را دوباره رندر می‌کند تا ماه جدید نمایش داده شود
+                    this.renderChequeCalendar();
+                    // صفحه را به بالا اسکرول می‌کند تا تقویم دیده شود
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
+                renderChequeCalendar() {
+                    const container = document.getElementById('cheque-calendar-container');
+                    if (!container) return;
+
+                    document.getElementById('calendar-month-year').textContent = this.currentCalendarDate.format('jMMMM jYYYY');
+
+                    const today = moment().format('jYYYY/MM/DD');
+                    const startOfMonth = this.currentCalendarDate.clone().startOf('jMonth');
+                    const endOfMonth = this.currentCalendarDate.clone().endOf('jMonth');
+                    const startDayOfWeek = startOfMonth.day();
+
+                    let html = '<table class="calendar"><thead><tr><th>ش</th><th>ی</th><th>د</th><th>س</th><th>چ</th><th>پ</th><th>ج</th></tr></thead><tbody><tr>';
+
+                    for (let i = 0; i < startDayOfWeek; i++) {
+                        html += '<td class="other-month"></td>';
+                    }
+
+                    let currentDay = startOfMonth.clone();
+                    while (currentDay.isBefore(endOfMonth) || currentDay.isSame(endOfMonth, 'day')) {
+                        // از فرمت دو رقمی استفاده می‌کنیم
+                        const dateStr = currentDay.format('jYYYY/MM/DD');
+                        const chequesForDay = this.cheques.filter(c => moment(c.dueDate).format('jYYYY/MM/DD') === dateStr);
+
+                        let dayClasses = [];
+                        if (dateStr === today) dayClasses.push('today');
+                        if (chequesForDay.length > 0) dayClasses.push('day-with-cheques');
+
+                        const hasPayable = chequesForDay.some(c => c.type === 'payable');
+                        const hasReceivable = chequesForDay.some(c => c.type === 'receivable');
+
+                        html += `<td class="${dayClasses.join(' ')}" ${chequesForDay.length > 0 ? `onclick="app.showChequesForDay('${dateStr}')"` : ''}>`;
+                        html += `<div class="day-number">${currentDay.format('jD')}</div>`;
+
+                        if (chequesForDay.length > 0) {
+                            html += '<div class="cheque-dot-container">';
+                            if (hasPayable) html += '<div class="cheque-dot dot-payable"></div>';
+                            if (hasReceivable) html += '<div class="cheque-dot dot-receivable"></div>';
+                            html += '</div>';
+                        }
+
+                        html += '</td>';
+
+                        if (currentDay.day() === 6) {
+                            html += '</tr><tr>';
+                        }
+                        currentDay.add(1, 'day');
+                    }
+
+                    while (currentDay.day() !== 0) {
+                        html += '<td class="other-month"></td>';
+                        if (currentDay.day() === 6) break;
+                        currentDay.add(1, 'day');
+                    }
+
+                    html += '</tr></tbody></table>';
+                    container.innerHTML = html;
+                },
+
+
+                showChequesForDay(jDateStr) {
+                    // از فرمت دو رقمی برای فیلتر کردن استفاده می‌کنیم
+                    const chequesForDay = this.cheques
+                        .filter(c => moment(c.dueDate).format('jYYYY/MM/DD') === jDateStr)
+                        .sort((a, b) => a.type.localeCompare(b.type));
+
+                    const chequesHtml = chequesForDay.map(cheque => {
+                        const typeText = cheque.type === 'payable' ? 'پرداختی' : 'دریافتی';
+                        const typeColor = cheque.type === 'payable' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+                        return `
+            <div class="p-3 border-b last:border-none">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold">${this.formatPrice(cheque.amount)}</span>
+                    <span class="text-xs font-medium px-2.5 py-0.5 rounded ${typeColor}">${typeText}</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">از ${cheque.from} به ${cheque.to}</p>
+            </div>
+        `;
+                    }).join('');
+
+                    const modalHTML = `
+        <div class="modal-backdrop" id="dayChequesModal">
+            <div class="modal-content max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">چک‌های روز ${jDateStr}</h3>
+                    <button onclick="app.closeModal('dayChequesModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    ${chequesHtml.length > 0 ? chequesHtml : '<p class="text-center text-gray-500">چکی برای این روز ثبت نشده است.</p>'}
+                </div>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+                },
+
+                showChequeFormModal(chequeId = null) {
+                    const isEdit = chequeId !== null;
+                    const cheque = isEdit ? this.cheques.find(c => c.id === chequeId) : {};
+                    const title = isEdit ? 'ویرایش چک' : 'ثبت چک جدید';
+
+                    const modalHTML = `
+        <div class="modal-backdrop" id="chequeFormModal">
+            <div class="modal-content max-w-lg">
+                <form id="chequeForm">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm">مبلغ (ریال)</label><input name="amount" type="number" value="${cheque.amount || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                        <div>
+                            <label class="block text-sm mb-2">نوع چک</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center"><input type="radio" name="type" value="receivable" ${cheque.type === 'receivable' || !isEdit ? 'checked' : ''} class="ml-2">دریافتی</label>
+                                <label class="flex items-center"><input type="radio" name="type" value="payable" ${cheque.type === 'payable' ? 'checked' : ''} class="ml-2">پرداختی</label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" value="${cheque.from || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                            <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" value="${cheque.to || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                        </div>
+                        <div><label class="block text-sm">تاریخ سررسید (مثال: 1404/06/01)</label><input name="dueDate" value="${cheque.dueDate ? moment(cheque.dueDate).format('jYYYY/MM/DD') : ''}" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    // فرمت خودکار تاریخ
+                    const dueDateInput = document.querySelector('input[name="dueDate"]');
+                    dueDateInput.addEventListener('input', (e) => {
+                        let value = e.target.value.replace(/\D/g, '');
+                        if (value.length > 4) value = value.slice(0, 4) + '/' + value.slice(4);
+                        if (value.length > 7) value = value.slice(0, 7) + '/' + value.slice(7, 9);
+                        e.target.value = value;
+                    });
+
+                    document.getElementById('chequeForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveCheque(new FormData(e.target), chequeId);
+                    };
+                },
+
+                async saveCheque(formData, chequeId = null) {
+                    const jDateStr = formData.get('dueDate');
+                    // ... (کد اعتبارسنجی تاریخ شما اینجا قرار می‌گیرد) ...
+                    const parsedDate = moment(jDateStr, 'jYYYY/jMM/jDD');
+                    if (!parsedDate.isValid()) {
+                        alert('فرمت تاریخ صحیح نیست.');
+                        return;
+                    }
+                    const gregorianDate = parsedDate.format('YYYY-MM-DD');
+
+                    const chequeData = {
+                        amount: parseInt(formData.get('amount')),
+                        type: formData.get('type'),
+                        from: formData.get('from'),
+                        to: formData.get('to'),
+                        dueDate: gregorianDate,
+                    };
+
+                    try {
+                        let response;
+                        if (chequeId) { // ویرایش
+                            response = await supabase.from('cheques').update(chequeData).eq('id', chequeId);
+                        } else { // افزودن
+                            chequeData.status = 'pending';
+                            response = await supabase.from('cheques').insert([chequeData]);
+                        }
+                        if (response.error) throw response.error;
+                        this.closeModal('chequeFormModal');
+                    } catch (error) {
+                        console.error("Error saving cheque: ", error);
+                        alert('خطا در ذخیره چک.');
+                    }
+                },
+
+                async deleteCheque(chequeId) {
+                    this.showConfirmModal('حذف چک', 'آیا مطمئن هستید؟', async () => {
+                        try {
+                            const { error } = await supabase.from('cheques').delete().eq('id', chequeId);
+                            if (error) throw error;
+                        } catch (error) {
+                            console.error("Error deleting cheque: ", error);
+                        }
+                    });
+                },
+
+
+                showChequeFormModal() {
+                    const modalHTML = `
+        <div class="modal-backdrop" id="chequeFormModal">
+            <div class="modal-content max-w-lg">
+                <form id="chequeForm">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">ثبت چک جدید</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm">مبلغ (ریال)</label><input name="amount" type="number" required class="mt-1 w-full border rounded-md p-2"></div>
+                        <div>
+                            <label class="block text-sm mb-2">نوع چک</label>
+                            <div class="flex gap-4">
+                                <label class="flex items-center"><input type="radio" name="type" value="receivable" checked class="ml-2">دریافتی</label>
+                                <label class="flex items-center"><input type="radio" name="type" value="payable" class="ml-2">پرداختی</label>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" required class="mt-1 w-full border rounded-md p-2"></div>
+                            <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" required class="mt-1 w-full border rounded-md p-2"></div>
+                        </div>
+                        <div><label class="block text-sm">تاریخ سررسید (مثال: 1402/06/30)</label><input name="dueDate" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+                    this.modalContainer.innerHTML = modalHTML;
+
+                    // --- کد جدید برای فرمت خودکار تاریخ ---
+                    const dueDateInput = document.querySelector('input[name="dueDate"]');
+                    dueDateInput.addEventListener('input', (e) => {
+                        let value = e.target.value.replace(/\D/g, ''); // فقط عددها را نگه می‌دارد
+                        if (value.length > 4) {
+                            value = value.slice(0, 4) + '/' + value.slice(4);
+                        }
+                        if (value.length > 7) {
+                            // فقط دو رقم برای ماه و دو رقم برای روز نگه می‌دارد
+                            value = value.slice(0, 7) + '/' + value.slice(7, 9);
+                        }
+                        e.target.value = value;
+                    });
+                    // --- پایان کد جدید ---
+
+                    document.getElementById('chequeForm').onsubmit = (e) => {
+                        e.preventDefault();
+                        this.saveCheque(new FormData(e.target));
+                    };
+                },
+
+            };
+
+
+            window.app = app;
+            app.init();
+        });
+    </script>
+</body>
+
+</html>m
