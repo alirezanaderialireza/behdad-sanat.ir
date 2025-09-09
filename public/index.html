@@ -975,6 +975,7 @@
                                 .eq('categoryId', categoryId);
 
                             if (error) throw error;
+                            this.products = productsData || []; // داده‌ها را در وضعیت برنامه ذخیره می‌کنیم
 
                             const categoryProducts = productsData || [];
 
