@@ -453,40 +453,6 @@
                         this.showDashboard();
                     },
 
-                    async loadAllData() {
-                        console.log("Loading all data from Supabase...");
-                        const [
-                            companiesRes, contactsRes, categoriesRes, productsRes, salesRes, chequesRes, messagesRes, profilesRes
-                        ] = await Promise.all([
-                            supabase.from('companies').select('*'),
-                            supabase.from('contacts').select('*'),
-                            supabase.from('product_categories').select('*'),
-                            supabase.from('products').select('*'),
-                            supabase.from('sales_orders').select('*'),
-                            supabase.from('cheques').select('*'),
-                            supabase.from('messages').select('*'),
-                            supabase.from('profiles').select('id, full_name, role')
-                        ]);
-
-                        this.companies = companiesRes.data || [];
-                        this.contacts = contactsRes.data || [];
-                        this.productCategories = categoriesRes.data || [];
-                        this.products = productsRes.data || [];
-                        this.salesOrders = salesRes.data || [];
-                        this.cheques = chequesRes.data || [];
-                        this.messages = messagesRes.data || [];
-
-                        this.users = {};
-                        if (profilesRes.data) {
-                            profilesRes.data.forEach(p => {
-                                this.users[p.id] = { name: p.full_name, role: p.role };
-                            });
-                        }
-
-                        this.dataLoaded = true;
-                        console.log("All data loaded.");
-                        this.refreshCurrentPage();
-                    },
 
                     // --- Authentication ---
 
@@ -705,7 +671,7 @@
                             const validContacts = this.contacts.filter(c => c && c.name && c.status);
 
                             const customers = validContacts.filter(c => c.status === 'مشتری');
-                            const negotiating = validContacts.filter(c => c.status === 'در حال مذاک-ره');
+                            const negotiating = validContacts.filter(c => c.status === 'در حال مذاکره');
                             const newLeads = validContacts.filter(c => c.status === 'سرنخ جدید');
                             const initialTalks = validContacts.filter(c => c.status === 'مذاکره اولیه');
 
@@ -741,8 +707,36 @@
                                 }).join('');
                             };
 
-                            const createGroup = (title, contacts, id, bgColor) => `...`; // این تابع بدون تغییر باقی می‌ماند
-
+                            const createGroup = (title, contacts, id, bgColor) => {
+                                const tableId = `table-${id}`;
+                                return `
+        <div class="mb-4">
+            <div class="contact-group-header flex justify-between items-center p-4 rounded-lg cursor-pointer ${bgColor}" onclick="app.toggleContactGroup('${tableId}')">
+                <h3 class="text-lg font-bold text-gray-800">${title} (${contacts.length})</h3>
+                <i class="fas fa-chevron-down expand-icon"></i>
+            </div>
+            <div id="${tableId}" class="contact-group-content">
+                <div class="overflow-x-auto border rounded-b-lg">
+                    <table class="w-full text-sm text-right text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase ${bgColor}">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">نام</th>
+                                <th scope="col" class="px-6 py-3">شرکت</th>
+                                <th scope="col" class="px-6 py-3">مسئول</th>
+                                <th scope="col" class="px-6 py-3">آخرین خرید</th>
+                                <th scope="col" class="px-6 py-3">جزئیات</th>
+                                <th scope="col" class="px-6 py-3 text-left">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${createTableRows(contacts)}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+                            };
                             // برگرداندن HTML نهایی
                             return `<div class="card p-6">
                     <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4"><h3 class="text-xl font-bold text-gray-800">مدیریت مخاطبین</h3><button onclick="app.showContactFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن مخاطب جدید</button></div>
@@ -909,6 +903,7 @@
 
 
 
+                    // این تابع را جایگزین کنید
                     async generateProductsContent() {
                         try {
                             const { data: categoriesData, error } = await supabase.from('product_categories').select('*');
@@ -917,31 +912,31 @@
                             this.productCategories = categoriesData || [];
 
                             let categoryCircles = this.productCategories.map(category => {
-                                const deleteButton = this.currentUser.role === 'admin'
-                                    ? `<button onclick="event.stopPropagation(); app.deleteCategory('${category.id}')" class="absolute top-0 right-0 text-xs text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center z-10" title="حذف گروه"><i class="fas fa-times"></i></button>`
-                                    : '';
+                                const canModify = this.currentUser.role === 'admin';
+                                const deleteButton = canModify ? `<button onclick="event.stopPropagation(); app.deleteCategory('${category.id}')" class="absolute top-0 right-0 text-xs text-white bg-red-600 hover:bg-red-700 rounded-full w-6 h-6 flex items-center justify-center z-10" title="حذف گروه"><i class="fas fa-times"></i></button>` : '';
+                                const editButton = canModify ? `<button onclick="event.stopPropagation(); app.showCategoryFormModal('${category.id}')" class="absolute top-0 left-0 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded-full w-6 h-6 flex items-center justify-center z-10" title="ویرایش گروه"><i class="fas fa-pen"></i></button>` : '';
+
                                 return `
-                <div class="relative">
-                    ${deleteButton}
-                    <div class="category-circle" data-category-id="${category.id}" onclick="app.showProductsForCategory('${category.id}', this)">${category.name}</div>
-                </div>
-            `;
+        <div class="relative">
+            ${deleteButton}
+            ${editButton}
+            <div class="category-circle" data-category-id="${category.id}" onclick="app.showProductsForCategory('${category.id}', this)">${category.name}</div>
+        </div>
+        `;
                             }).join('');
 
                             return `
-            <div class="card p-6">
-                <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                    <h3 class="text-xl font-bold text-gray-800">کاتالوگ محصولات</h3>
-                    <button onclick="app.showCategoryFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
-                        <i class="fas fa-plus ml-2"></i>افزودن گروه
-                    </button>
-                </div>
-                <p class="text-gray-600 mb-6">برای مشاهده محصولات، روی یکی از گروه‌های زیر کلیک کنید.</p>
-                <div id="categoryContainer" class="flex justify-center gap-8 flex-wrap p-4 bg-gray-50 rounded-lg">
-                    ${categoryCircles.length > 0 ? categoryCircles : '<p class="text-gray-500">هنوز گروهی ثبت نشده است.</p>'}
-                </div>
-                <div id="productsContainer" class="mt-8"></div>
-            </div>`;
+    <div class="card p-6">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <h3 class="text-xl font-bold text-gray-800">کاتالوگ محصولات</h3>
+            ${this.currentUser.role === 'admin' ? `<button onclick="app.showCategoryFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن گروه</button>` : ''}
+        </div>
+        <p class="text-gray-600 mb-6">برای مشاهده محصولات، روی یکی از گروه‌های زیر کلیک کنید.</p>
+        <div id="categoryContainer" class="flex justify-center gap-8 flex-wrap p-4 bg-gray-50 rounded-lg">
+            ${categoryCircles.length > 0 ? categoryCircles : '<p class="text-gray-500">هنوز گروهی ثبت نشده است.</p>'}
+        </div>
+        <div id="productsContainer" class="mt-8"></div>
+    </div>`;
                         } catch (error) {
                             console.error('Error generating products content:', error);
                             return `<div class="card p-6 text-red-500">خطا در بارگذاری دسته‌بندی محصولات.</div>`;
@@ -952,13 +947,10 @@
 
                     async showProductsForCategory(categoryId, element) {
                         if (element) {
-                            // فعال کردن دایره دسته‌بندی انتخاب شده
                             document.querySelectorAll('.category-circle').forEach(c => c.classList.remove('active'));
                             element.classList.add('active');
                         }
                         const productsContainer = document.getElementById('productsContainer');
-
-                        // نمایش پیام "در حال بارگذاری..." برای تجربه کاربری بهتر
                         productsContainer.innerHTML = `<div class="text-center p-4 text-gray-500">در حال بارگذاری محصولات...</div>`;
 
                         const category = this.productCategories.find(c => c.id === categoryId);
@@ -968,50 +960,36 @@
                         }
 
                         try {
-                            // فراخوانی محصولات فقط برای این دسته‌بندی خاص از دیتابیس
-                            const { data: productsData, error } = await supabase
-                                .from('products')
-                                .select('*')
-                                .eq('categoryId', categoryId);
-
+                            const { data: productsData, error } = await supabase.from('products').select('*').eq('categoryId', categoryId);
                             if (error) throw error;
-                            this.products = productsData || []; // داده‌ها را در وضعیت برنامه ذخیره می‌کنیم
+                            this.products = productsData || [];
 
-                            const categoryProducts = productsData || [];
-
-                            // بقیه کد شما برای ساخت HTML محصولات بدون تغییر است
-                            let productItems = categoryProducts.map(product => {
-                                const adminButtons = this.currentUser.role === 'admin'
-                                    ? `
-                    <button onclick="event.stopPropagation(); app.showProductFormModal('${product.categoryId}', '${product.id}')" class="absolute top-1 right-1 text-xs text-blue-600 hover:text-blue-800 bg-white/70 rounded-full w-6 h-6 flex items-center justify-center" title="ویرایش"><i class="fas fa-edit"></i></button>
-                    <button onclick="event.stopPropagation(); app.deleteProduct('${product.id}')" class="absolute top-1 left-1 text-xs text-red-600 hover:text-red-800 bg-white/70 rounded-full w-6 h-6 flex items-center justify-center" title="حذف"><i class="fas fa-trash"></i></button>
-                `
-                                    : '';
+                            let productItems = this.products.map(product => {
+                                const canModify = this.currentUser.role === 'admin';
+                                const deleteButton = canModify ? `<button onclick="event.stopPropagation(); app.deleteProduct('${product.id}')" class="absolute top-1 right-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded-full w-5 h-5 flex items-center justify-center z-10" title="حذف محصول"><i class="fas fa-times"></i></button>` : '';
+                                const editButton = canModify ? `<button onclick="event.stopPropagation(); app.showProductFormModal('${categoryId}', '${product.id}')" class="absolute top-1 left-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded-full w-5 h-5 flex items-center justify-center z-10" title="ویرایش محصول"><i class="fas fa-pen"></i></button>` : '';
 
                                 return `
-                <div class="flex flex-col items-center">
-                    <div class="product-circle relative" onclick="app.showProductDetails('${product.id}')">
-                        ${product.name}
-                        ${adminButtons}
-                    </div>
-                    <p class="mt-2 text-sm font-bold text-gray-700">${this.formatPrice(product.price)}</p>
-                </div>
-            `;
-                            }).join('');
-
-                            // نمایش نهایی محصولات در کانتینر
-                            productsContainer.innerHTML = `
-            <div class="border-t pt-6 mt-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h4 class="text-lg font-bold">محصولات گروه: <span class="text-blue-600">${category.name}</span></h4>
-                    <button onclick="app.showProductFormModal('${categoryId}')" class="btn-primary px-4 py-2 rounded-md text-sm">
-                        <i class="fas fa-plus ml-2"></i>افزودن محصول
-                    </button>
-                </div>
-                <div class="flex justify-center gap-6 flex-wrap">
-                    ${productItems.length > 0 ? productItems : '<p class="text-gray-500 col-span-full text-center">هنوز محصولی در این گروه ثبت نشده است.</p>'}
+            <div class="relative" onclick="app.showProductDetails('${product.id}')">
+                 ${deleteButton}
+                 ${editButton}
+                <div class="product-circle">
+                    ${product.name}
+                    <br>
+                    <span class="text-xs font-normal">${this.formatPrice(product.price)}</span>
                 </div>
             </div>`;
+                            }).join('');
+
+                            productsContainer.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <h4 class="text-lg font-bold text-gray-800">محصولات گروه: ${category.name}</h4>
+                ${this.currentUser.role === 'admin' ? `<button onclick="app.showProductFormModal('${categoryId}')" class="btn-primary px-3 py-1 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن محصول</button>` : ''}
+            </div>
+            <div class="flex justify-center gap-6 flex-wrap p-4 bg-gray-50 rounded-lg min-h-[150px]">
+                ${productItems.length > 0 ? productItems : '<p class="text-gray-500 self-center">محصولی در این گروه ثبت نشده است.</p>'}
+            </div>
+        `;
 
                         } catch (error) {
                             console.error('Error fetching products for category:', error);
@@ -1046,19 +1024,24 @@
 
 
 
-                    async saveCategory(formData) {
-                        const newCategory = { name: formData.get('name') };
-                        if (!newCategory.name) {
-                            alert('نام گروه نمی‌تواند خالی باشد.');
+                    async saveCategory(formData, categoryId = null) {
+                        const categoryData = { name: formData.get('name') };
+                        if (!categoryData.name) {
+                            this.showToast('نام گروه نمی‌تواند خالی باشد.', 'error');
                             return;
                         }
                         try {
-                            const { error } = await supabase.from('productCategories').insert([newCategory]);
+                            const { error } = categoryId
+                                ? await supabase.from('product_categories').update(categoryData).eq('id', categoryId)
+                                : await supabase.from('product_categories').insert([categoryData]);
                             if (error) throw error;
+
                             this.closeModal('categoryFormModal');
+                            this.showToast(`گروه با موفقیت ${categoryId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
+                            this.refreshCurrentPage(); // Refresh the page to show changes
                         } catch (error) {
-                            console.error("Error adding category: ", error);
-                            alert('خطا در افزودن گروه.');
+                            console.error("Error saving category: ", error);
+                            this.showToast('خطا در ذخیره گروه.', 'error');
                         }
                     },
 
@@ -1128,30 +1111,34 @@
                         }
                     },
 
-                    showCategoryFormModal() {
+                    showCategoryFormModal(categoryId = null) {
+                        const isEdit = categoryId !== null;
+                        const category = isEdit ? this.productCategories.find(c => c.id === categoryId) : {};
+                        const title = isEdit ? 'ویرایش گروه' : 'افزودن گروه جدید';
+
                         const modalHTML = `
-                        <div class="modal-backdrop" id="categoryFormModal">
-                            <div class="modal-content max-w-md">
-                                <form id="categoryForm">
-                                    <div class="flex justify-between items-center mb-6">
-                                        <h3 class="text-xl font-bold">افزودن گروه جدید</h3>
-                                        <button type="button" onclick="app.closeModal('categoryFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">نام گروه</label>
-                                        <input name="name" type="text" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
-                                    </div>
-                                    <div class="mt-6 flex justify-end gap-4">
-                                        <button type="button" onclick="app.closeModal('categoryFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
-                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>`;
+    <div class="modal-backdrop" id="categoryFormModal">
+        <div class="modal-content max-w-md">
+            <form id="categoryForm">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold">${title}</h3>
+                    <button type="button" onclick="app.closeModal('categoryFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">نام گروه</label>
+                    <input name="name" type="text" value="${category.name || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" onclick="app.closeModal('categoryFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                </div>
+            </form>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
                         document.getElementById('categoryForm').onsubmit = (e) => {
                             e.preventDefault();
-                            this.saveCategory(new FormData(e.target));
+                            this.saveCategory(new FormData(e.target), categoryId);
                         };
                     },
 
@@ -1585,50 +1572,154 @@
                     },
 
                     async deleteCategory(categoryId) {
-                        // ... (کد نمایش پیام هشدار مثل قبل باقی می‌ماند) ...
-                        this.showConfirmModal('حذف گروه', 'آیا مطمئن هستید؟', async () => {
+                        this.showConfirmModal('حذف گروه', 'آیا مطمئن هستید؟ با حذف گروه، تمام محصولات داخل آن نیز حذف خواهند شد.', async () => {
                             try {
-                                // ابتدا محصولات مرتبط را حذف می‌کنیم
+                                // In Supabase, you should set up "ON DELETE CASCADE" for this to be automatic and safer.
+                                // But for now, we delete products manually first.
                                 const { error: productError } = await supabase.from('products').delete().eq('categoryId', categoryId);
                                 if (productError) throw productError;
 
-                                // سپس خود گروه را حذف می‌کنیم
-                                const { error: categoryError } = await supabase.from('productCategories').delete().eq('id', categoryId);
+                                const { error: categoryError } = await supabase.from('product_categories').delete().eq('id', categoryId);
                                 if (categoryError) throw categoryError;
+
+                                this.showToast('گروه و محصولات آن با موفقیت حذف شدند.', 'success');
+                                this.refreshCurrentPage();
                             } catch (error) {
                                 console.error("Error deleting category: ", error);
+                                this.showToast('خطا در حذف گروه.', 'error');
                             }
                         });
                     },
                     async generateMessagesContent() {
                         try {
                             let managerApprovalSection = '';
+                            let inboxSection = '';
 
-                            // بخش تایید مدیر
+                            // ۱. فراخوانی همزمان تمام داده‌های مورد نیاز
+                            const promises = [
+                                supabase.from('messages').select('*').eq('recipient', this.currentUser.id),
+                            ];
+
+                            // اگر کاربر مدیر بود، درخواست‌های نیازمند تایید را هم دریافت کن
                             if (this.currentUser.role === 'admin') {
-                                const { data: pendingOrders, error: pendingError } = await supabase
-                                    .from('sales_orders')
-                                    .select('id, created_by, contactId, totalPrice, status')
-                                    .in('status', ['pending_manager_approval', 'initial_approval']);
-
-                                if (pendingError) throw pendingError;
-
-                                // ... (بقیه کد بخش تایید مدیر بدون تغییر باقی می‌ماند)
+                                promises.push(supabase.from('sales_orders').select('*').in('status', ['pending_manager_approval', 'initial_approval']));
+                                promises.push(supabase.from('contacts').select('id, name')); // برای نمایش نام مشتری
                             }
 
-                            // بخش صندوق ورودی پیام‌ها
-                            const { data: messagesData, error: messagesError } = await supabase
-                                .from('messages')
-                                .select('*')
-                                .eq('recipient', this.currentUser.id); // پیام‌هایی که گیرنده آن‌ها کاربر فعلی است
+                            const [messagesRes, pendingOrdersRes, contactsRes] = await Promise.all(promises);
 
-                            if (messagesError) throw messagesError;
+                            // بررسی خطاها
+                            if (messagesRes.error) throw messagesRes.error;
+                            if (pendingOrdersRes && pendingOrdersRes.error) throw pendingOrdersRes.error;
+                            if (contactsRes && contactsRes.error) throw contactsRes.error;
 
-                            this.messages = messagesData || [];
+                            this.messages = messagesRes.data || [];
+                            const pendingOrders = (pendingOrdersRes && pendingOrdersRes.data) || [];
+                            const contacts = (contactsRes && contactsRes.data) || [];
 
-                            // ... (بقیه کد شما برای ساخت HTML پیام‌ها بدون تغییر باقی می‌ماند)
+                            // ساخت مپ برای دسترسی سریع به نام مشتریان
+                            const contactsMap = contacts.reduce((map, contact) => {
+                                map[contact.id] = contact.name;
+                                return map;
+                            }, {});
 
-                            return `...`; // HTML نهایی
+
+                            // ۲. ساخت بخش تایید مدیر (فقط برای ادمین)
+                            if (this.currentUser.role === 'admin') {
+                                const pendingOrderRows = pendingOrders.map(order => {
+                                    const salesperson = this.users[order.created_by] ? this.users[order.created_by].name : 'نامشخص';
+                                    const contactName = contactsMap[order.contactId] || 'حذف شده';
+                                    const statusInfo = this.getPersianStatus(order.status);
+
+                                    let actionButtons = '';
+                                    if (order.status === 'pending_manager_approval') {
+                                        actionButtons = `
+                        <button onclick="app.approveSaleFirstStage('${order.id}')" class="font-medium text-blue-600 hover:underline">تایید اولیه</button>
+                        <button onclick="app.rejectSale('${order.id}')" class="font-medium text-red-600 hover:underline mr-4">رد کردن</button>
+                    `;
+                                    } else if (order.status === 'initial_approval') {
+                                        actionButtons = `
+                        <button onclick="app.approveSaleFinalStage('${order.id}')" class="font-medium text-green-600 hover:underline">تایید نهایی</button>
+                        <button onclick="app.rejectSale('${order.id}')" class="font-medium text-red-600 hover:underline mr-4">رد کردن</button>
+                    `;
+                                    }
+
+                                    return `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-4 py-3">${salesperson}</td>
+                        <td class="px-4 py-3">${contactName}</td>
+                        <td class="px-4 py-3 font-semibold">${this.formatPrice(order.totalPrice)}</td>
+                        <td class="px-4 py-3"><span class="text-xs font-medium px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
+                        <td class="px-4 py-3 text-left">${actionButtons}</td>
+                    </tr>
+                `;
+                                }).join('');
+
+                                managerApprovalSection = `
+                <div class="card p-6 mb-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">فاکتورهای نیازمند تایید</h3>
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-right">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3">فروشنده</th>
+                                    <th class="px-4 py-3">مشتری</th>
+                                    <th class="px-4 py-3">مبلغ کل</th>
+                                    <th class="px-4 py-3">وضعیت</th>
+                                    <th class="px-4 py-3 text-left">عملیات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${pendingOrderRows.length > 0 ? pendingOrderRows : '<tr><td colspan="5" class="text-center py-4 text-gray-500">موردی برای تایید وجود ندارد.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+                            }
+
+                            // ۳. ساخت بخش صندوق ورودی پیام‌ها
+                            const messageRows = this.messages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).map(message => {
+                                const sender = this.users[message.sender] ? this.users[message.sender].name : 'کاربر حذف شده';
+                                return `
+                <tr class="bg-white border-b hover:bg-gray-50 ${!message.read ? 'font-bold' : ''}">
+                    <td class="px-4 py-3">${sender}</td>
+                    <td class="px-4 py-3">${message.subject}</td>
+                    <td class="px-4 py-3 text-sm font-normal">${new Date(message.timestamp).toLocaleString('fa-IR')}</td>
+                    <td class="px-4 py-3 text-left">
+                        <button onclick="app.showMessageDetailsModal('${message.id}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-eye"></i> مشاهده</button>
+                        <button onclick="app.deleteMessage('${message.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+                    </td>
+                </tr>
+            `;
+                            }).join('');
+
+                            inboxSection = `
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold text-gray-800">صندوق ورودی پیام‌ها</h3>
+                    <button onclick="app.showComposeMessageModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-paper-plane ml-2"></i>ارسال پیام جدید</button>
+                </div>
+                <div class="overflow-x-auto border rounded-lg">
+                    <table class="w-full text-sm text-right">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3">فرستنده</th>
+                                <th class="px-4 py-3">موضوع</th>
+                                <th class="px-4 py-3">تاریخ</th>
+                                <th class="px-4 py-3 text-left">عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${messageRows.length > 0 ? messageRows : '<tr><td colspan="4" class="text-center py-4 text-gray-500">پیامی برای نمایش وجود ندارد.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+                            // ۴. برگرداندن HTML نهایی
+                            return managerApprovalSection + inboxSection;
 
                         } catch (error) {
                             console.error('Error generating messages content:', error);
@@ -1697,28 +1788,7 @@
 
 
 
-                    deleteCategory(categoryId) {
-                        const category = this.productCategories.find(c => c.id === categoryId);
-                        if (!category) return;
-                        const productsInCategory = this.products.filter(p => p.categoryId === categoryId);
-                        let message = `آیا از حذف گروه "${category.name}" اطمینان دارید؟`;
-                        if (productsInCategory.length > 0) {
-                            message += `\n\nتوجه: ${productsInCategory.length} محصول مرتبط نیز حذف خواهند شد.`;
-                        }
 
-                        this.showConfirmModal('حذف گروه محصول', message, async () => {
-                            try {
-                                // Note: In a real app, you'd use a batch write to delete products and category together.
-                                for (const product of productsInCategory) {
-                                    await fb.deleteDoc(fb.doc(db, "products", product.id));
-                                }
-                                await fb.deleteDoc(fb.doc(db, "productCategories", categoryId));
-                                console.log("Category and its products deleted.");
-                            } catch (error) {
-                                console.error("Error deleting category: ", error);
-                            }
-                        });
-                    },
 
                     async deleteProduct(productId) {
                         this.showConfirmModal('حذف محصول', 'آیا مطمئن هستید؟', async () => {
@@ -1828,21 +1898,7 @@
                         };
                     },
 
-                    sendMessage(formData) {
-                        const newMessage = {
-                            id: Date.now(),
-                            type: 'general', // نوع پیام عمومی
-                            sender: this.currentUser.username,
-                            recipient: formData.get('recipient'),
-                            subject: formData.get('subject'),
-                            body: formData.get('body'),
-                            timestamp: new Date().toISOString(),
-                            read: false
-                        };
-                        this.messages.push(newMessage);
-                        this.closeModal('composeModal');
-                        alert('پیام شما با موفقیت ارسال شد.');
-                    },
+
 
                     closeModal(modalId) { const modal = document.getElementById(modalId); if (modal) { modal.remove(); } },
                     showConfirmModal(title, message, onConfirm) {
@@ -2333,6 +2389,33 @@
                             // پس از اتمام انیمیشن خروج، المنت را کامل حذف کن
                             toast.addEventListener('transitionend', () => toast.remove());
                         }, duration);
+                    },
+                    async rejectSale(orderId) {
+                        this.showConfirmModal('رد کردن فاکتور', 'آیا از رد کردن این فاکتور فروش اطمینان دارید؟', async () => {
+                            try {
+                                const { error } = await supabase.from('sales_orders').update({ status: 'rejected' }).eq('id', orderId);
+                                if (error) throw error;
+                                this.showToast('فاکتور با موفقیت رد شد.', 'success');
+                                this.refreshCurrentPage();
+                            } catch (error) {
+                                console.error("Error rejecting sale: ", error);
+                                this.showToast('خطا در رد کردن فاکتور.', 'error');
+                            }
+                        });
+                    },
+
+                    async deleteMessage(messageId) {
+                        this.showConfirmModal('حذف پیام', 'آیا از حذف این پیام اطمینان دارید؟', async () => {
+                            try {
+                                const { error } = await supabase.from('messages').delete().eq('id', messageId);
+                                if (error) throw error;
+                                this.showToast('پیام با موفقیت حذف شد.', 'success');
+                                this.refreshCurrentPage();
+                            } catch (error) {
+                                console.error("Error deleting message: ", error);
+                                this.showToast('خطا در حذف پیام.', 'error');
+                            }
+                        });
                     },
                     // ... ادامه توابع آبجکت app
 
