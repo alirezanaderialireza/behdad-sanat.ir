@@ -308,19 +308,25 @@
                         <p class="mt-2 text-sm text-gray-600">اطلاعات کاربری خود را وارد کنید</p>
                     </div>
                     <form id="loginForm" class="space-y-6">
-                        <div><label for="username" class="block text-sm font-medium text-gray-700">نام
-                                کاربری</label><input id="username" name="username" type="text" required
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700">نام کاربری یا
+                                ایمیل</label>
+                            <input id="username" name="username" type="text" required
+                                placeholder="نام کاربری یا ایمیل خود را وارد کنید"
                                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#003366] focus:border-[#003366] sm:text-sm">
                         </div>
-                        <div><label for="password" class="block text-sm font-medium text-gray-700">رمز
-                                عبور</label><input id="password" name="password" type="password" required
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">رمز عبور</label>
+                            <input id="password" name="password" type="password" required
                                 class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#003366] focus:border-[#003366] sm:text-sm">
                         </div>
                         <p id="loginError" class="text-red-500 text-sm hidden">نام کاربری یا رمز عبور اشتباه است.</p>
-                        <div><button type="submit"
+                        <div>
+                            <button type="submit"
                                 class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium btn-primary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#e0a800]">ورود</button>
                         </div>
                     </form>
+
                 </div>
             </div>
 
@@ -393,12 +399,32 @@
                             { id: 'dashboard', icon: 'fa-tachometer-alt', text: 'داشبورد', content: 'generateDashboardContent' },
                             { id: 'contacts', icon: 'fa-address-book', text: 'مخاطبین', content: 'generateContactsContent' },
                             { id: 'companies', icon: 'fa-building', text: 'شرکت‌ها', content: 'generateCompaniesContent' },
-                            { id: 'cheques', icon: 'fa-money-check-dollar', text: 'چک‌ها', content: 'generateChequesContent' },
                             { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فروش', content: 'generateSalesContent' },
                             { id: 'products', icon: 'fa-box-open', text: 'محصولات', content: 'generateProductsContent' },
+                            { id: 'cheques', icon: 'fa-money-check-dollar', text: 'چک‌ها', content: 'generateChequesContent' },
+                            { id: 'reports', icon: 'fa-chart-line', text: 'گزارشات', content: 'generateReportsContent' },
                             { id: 'users', icon: 'fa-users-cog', text: 'مدیریت کاربران', content: 'generateUserManagementContent' },
+                            // آیتم جدید زیر را اضافه کنید
+                            { id: 'settings', icon: 'fa-cog', text: 'تنظیمات', content: 'generateSettingsContent' }
                         ],
-                        // ... other roles can be defined here
+                        sales: [
+                            { id: 'dashboard', icon: 'fa-tachometer-alt', text: 'داشبورد', content: 'generateDashboardContent' },
+                            { id: 'contacts', icon: 'fa-address-book', text: 'مخاطبین', content: 'generateContactsContent' },
+                            { id: 'companies', icon: 'fa-building', text: 'شرکت‌ها', content: 'generateCompaniesContent' },
+                            { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فروش', content: 'generateSalesContent' },
+                            { id: 'products', icon: 'fa-box-open', text: 'محصولات', content: 'generateProductsContent' },
+                            { id: 'reports', icon: 'fa-chart-line', text: 'گزارشات من', content: 'generateReportsContent' },
+                            // آیتم جدید زیر را اضافه کنید
+                            { id: 'settings', icon: 'fa-cog', text: 'تنظیمات', content: 'generateSettingsContent' }
+                        ],
+                        accountant: [
+                            { id: 'dashboard', icon: 'fa-tachometer-alt', text: 'داشبورد', content: 'generateDashboardContent' },
+                            { id: 'cheques', icon: 'fa-money-check-dollar', text: 'چک‌ها', content: 'generateChequesContent' },
+                            { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فاکتورها', content: 'generateSalesContent' },
+                            { id: 'reports', icon: 'fa-chart-line', text: 'گزارشات من', content: 'generateReportsContent' },
+                            // آیتم جدید زیر را اضافه کنید
+                            { id: 'settings', icon: 'fa-cog', text: 'تنظیمات', content: 'generateSettingsContent' }
+                        ]
                     },
 
                     // --- Core App Logic ---
@@ -415,32 +441,33 @@
                         }
                     },
 
+                    // این تابع را پیدا کرده و با کد زیر جایگزین کنید
                     async setupSession(user) {
-                        // مرحله ۱: دریافت پروفایل کاربر وارد شده از دیتابیس
+                        // مرحله ۱: دریافت پروفایل کاربر وارد شده از دیتابیس (نام کاربری هم اضافه شده)
                         let { data: profile, error } = await supabase
                             .from('profiles')
-                            .select('full_name, role')
+                            .select('full_name, role, username') // دریافت نام کاربری
                             .eq('id', user.id)
                             .single();
 
-                        // مرحله ۲: بررسی خطا (اگر پروفایل برای کاربر ساخته نشده باشد)
+                        // مرحله ۲: بررسی خطا
                         if (error || !profile) {
                             console.error('Error fetching profile:', error);
-                            alert('خطا در دریافت اطلاعات پروفایل کاربر. لطفا مطمئن شوید برای این کاربر پروفایل ساخته شده است.');
+                            this.showToast('خطا در دریافت اطلاعات پروفایل کاربر. لطفا مطمئن شوید برای این کاربر پروفایل ساخته شده است.', 'error');
                             await this.handleLogout();
                             return;
                         }
 
-                        // مرحله ۳: ذخیره اطلاعات کاربر فعلی در وضعیت برنامه
+                        // مرحله ۳: ذخیره اطلاعات کاربر فعلی در وضعیت برنامه (نام کاربری هم اضافه شده)
                         this.currentUser = {
                             id: user.id,
                             email: user.email,
                             name: profile.full_name,
+                            username: profile.username, // ذخیره نام کاربری
                             role: profile.role
                         };
 
-                        // مرحله ۴ (بهینه‌سازی): فقط لیست تمام کاربران را بارگذاری می‌کنیم
-                        // این لیست برای نمایش نام فروشندگان و مسئولین در بخش‌های مختلف لازم است
+                        // مرحله ۴: بارگذاری لیست تمام کاربران (بدون تغییر)
                         const { data: profilesRes } = await supabase.from('profiles').select('id, full_name, role');
                         if (profilesRes) {
                             this.users = {}; // ابتدا لیست را خالی می‌کنیم
@@ -451,23 +478,60 @@
 
                         // مرحله ۵: نمایش داشبورد به کاربر
                         this.showDashboard();
+                        this.setupRealtimeSubscriptions();
                     },
 
 
                     // --- Authentication ---
 
+                    // این تابع را هم پیدا کرده و با کد جدید جایگزین کنید
                     async handleLogin(e) {
                         e.preventDefault();
                         this.loginError.classList.add('hidden');
-                        const email = e.target.username.value;
+                        const loginIdentifier = e.target.username.value;
                         const password = e.target.password.value;
 
-                        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+                        let emailToLogin = '';
 
-                        if (error) {
-                            this.loginError.textContent = 'ایمیل یا رمز عبور اشتباه است.';
-                            this.loginError.classList.remove('hidden');
-                            console.error('Error signing in:', error);
+                        // ۱. بررسی می‌کنیم که ورودی ایمیل است یا نام کاربری
+                        if (loginIdentifier.includes('@')) {
+                            // اگر ورودی شامل '@' بود، آن را به عنوان ایمیل در نظر می‌گیریم
+                            emailToLogin = loginIdentifier;
+                        } else {
+                            // در غیر این صورت، آن را به عنوان نام کاربری در نظر گرفته و ایمیل مرتبط را از جدول پروفایل‌ها پیدا می‌کنیم
+                            this.loginError.textContent = 'در حال بررسی نام کاربری...';
+                            this.loginError.classList.remove('hidden', 'text-red-500');
+                            this.loginError.classList.add('text-blue-500'); // رنگ پیام را موقتا تغییر می‌دهیم
+
+                            const { data: profile, error } = await supabase
+                                .from('profiles')
+                                .select('email') // فقط ایمیل را لازم داریم
+                                .eq('username', loginIdentifier.toLowerCase()) // جستجو بر اساس نام کاربری
+                                .single();
+
+                            if (error || !profile) {
+                                console.error('Username not found:', error);
+                                this.loginError.textContent = 'نام کاربری یافت نشد.';
+                                this.loginError.classList.remove('text-blue-500');
+                                this.loginError.classList.add('text-red-500');
+                                return;
+                            }
+                            emailToLogin = profile.email;
+                        }
+
+                        // ۲. حالا با ایمیلی که پیدا کردیم، تلاش برای ورود می‌کنیم
+                        this.loginError.textContent = 'در حال ورود...';
+
+                        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+                            email: emailToLogin,
+                            password: password
+                        });
+
+                        if (signInError) {
+                            this.loginError.textContent = 'نام کاربری/ایمیل یا رمز عبور اشتباه است.';
+                            this.loginError.classList.remove('text-blue-500');
+                            this.loginError.classList.add('text-red-500');
+                            console.error('Error signing in:', signInError);
                         } else if (data.user) {
                             await this.setupSession(data.user);
                         }
@@ -492,16 +556,27 @@
                     async loadContent(item) {
                         this.activePage = item;
                         this.pageTitle.textContent = item.text;
-
-                        // نمایش پیام "در حال بارگذاری"
                         this.contentArea.innerHTML = `<div class="text-center p-10 text-gray-500">در حال بارگذاری...</div>`;
 
                         if (typeof this[item.content] === 'function') {
-                            // منتظر می‌مانیم تا تابع async محتوا را بسازد
+                            // این خط محتوای HTML را تولید و در صفحه قرار می‌دهد
                             this.contentArea.innerHTML = await this[item.content]();
                         } else {
                             this.contentArea.innerHTML = `<div class="card p-6">محتوای صفحه ${item.text} در اینجا قرار می‌گیرد.</div>`;
                         }
+
+                        // --- کد جدید برای اتصال فرم تنظیمات ---
+                        // بعد از بارگذاری محتوا، چک می‌کنیم که آیا صفحه تنظیمات است یا نه
+                        if (item.id === 'settings') {
+                            const settingsForm = document.getElementById('settingsForm');
+                            if (settingsForm) {
+                                settingsForm.addEventListener('submit', (e) => {
+                                    e.preventDefault();
+                                    this.handleUpdateSettings(new FormData(e.target));
+                                });
+                            }
+                        }
+                        // --- پایان کد جدید ---
                     },
 
                     refreshCurrentPage() {
@@ -509,9 +584,57 @@
                             this.loadContent(this.activePage);
                         }
                     },
+                    setupRealtimeSubscriptions() {
+                        console.log('Setting up realtime subscriptions...');
+                        const tablesToWatch = [
+                            'contacts', 'companies', 'sales_orders',
+                            'products', 'product_categories', 'cheques', 'messages', 'profiles'
+                        ];
+
+                        const pageIdForTable = {
+                            'contacts': 'contacts',
+                            'companies': 'companies',
+                            'sales_orders': 'sales',
+                            'products': 'products',
+                            'product_categories': 'products',
+                            'cheques': 'cheques',
+                            'messages': 'messages',
+                            'profiles': 'users'
+                        };
+
+                        tablesToWatch.forEach(table => {
+                            supabase.channel(`public:${table}`)
+                                .on('postgres_changes', { event: '*', schema: 'public', table: table }, payload => {
+                                    console.log(`Change detected in ${table}:`, payload);
+
+                                    const relevantPageId = pageIdForTable[table];
+
+                                    if (this.activePage && this.activePage.id === relevantPageId) {
+                                        console.log(`Refreshing page '${this.activePage.id}' due to change in table '${table}'.`);
+                                        this.refreshCurrentPage();
+                                    } else {
+                                        const pageName = this.navItems[this.currentUser.role].find(item => item.id === relevantPageId)?.text || table;
+                                        this.showToast(`داده‌های بخش «${pageName}» به‌روز شد.`, 'info', 2500);
+                                    }
+                                })
+                                .subscribe(status => {
+                                    if (status === 'SUBSCRIBED') {
+                                        console.log(`Successfully subscribed to ${table} changes.`);
+                                    } else {
+                                        console.warn(`Failed to subscribe to ${table}. Status: ${status}`);
+                                    }
+                                });
+                        });
+                    },
+
 
                     // Helper Functions
                     formatPrice(price) {
+                        // 1. بررسی می‌کند که آیا قیمت یک عدد معتبر است یا نه
+                        if (price === null || typeof price === 'undefined' || isNaN(price)) {
+                            return '۰ تومان'; // در صورت نامعتبر بودن، یک مقدار پیش‌فرض نمایش می‌دهد
+                        }
+                        // 2. در صورتی که معتبر بود، آن را فرمت می‌کند
                         return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
                     },
                     formatDate(dateString) {
@@ -836,36 +959,37 @@
                     },
                     showCompanyFormModal(companyId = null) {
                         const isEdit = companyId !== null;
-                        const company = isEdit ? this.companies.find(c => c.id === companyId) : {};
+                        // Fix: Changed === to == to handle potential mismatch between string and number IDs
+                        const company = isEdit ? this.companies.find(c => c.id == companyId) : {};
                         const title = isEdit ? 'ویرایش شرکت' : 'افزودن شرکت جدید';
 
                         const modalHTML = `
-        <div class="modal-backdrop" id="companyFormModal">
-            <div class="modal-content max-w-lg">
-                <form id="companyForm">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('companyFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                    <div class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm">نام شرکت</label><input name="name" value="${company.name || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                            <div><label class="block text-sm">صنعت</label><input name="industry" value="${company.industry || ''}" class="mt-1 w-full border rounded-md p-2"></div>
-                        </div>
-                        <div><label class="block text-sm">تلفن</label><input name="phone" value="${company.phone || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+    <div class="modal-backdrop" id="companyFormModal">
+        <div class="modal-content max-w-lg">
+            <form id="companyForm">
+                <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('companyFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm">نام شرکت</label><input name="name" value="${company.name || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                        <div><label class="block text-sm">صنعت</label><input name="industry" value="${company.industry || ''}" class="mt-1 w-full border rounded-md p-2"></div>
                     </div>
-                    <div class="mt-6 flex justify-end gap-4">
-                        <button type="button" onclick="app.closeModal('companyFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
-                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
-                    </div>
-                </form>
-            </div>
-        </div>`;
+                    <div><label class="block text-sm">تلفن</label><input name="phone" value="${company.phone || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" onclick="app.closeModal('companyFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                </div>
+            </form>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
                         document.getElementById('companyForm').onsubmit = (e) => {
                             e.preventDefault();
-                            // The third parameter (previouslyAssignedContacts) is no longer needed.
                             this.saveCompany(new FormData(e.target), companyId);
                         };
                     },
+
                     async saveCompany(formData, companyId) {
                         const companyData = {
                             name: formData.get('name'),
@@ -953,9 +1077,12 @@
                         const productsContainer = document.getElementById('productsContainer');
                         productsContainer.innerHTML = `<div class="text-center p-4 text-gray-500">در حال بارگذاری محصولات...</div>`;
 
-                        const category = this.productCategories.find(c => c.id === categoryId);
+                        // خط تست: نقش کاربر فعلی را در کنسول مرورگر چاپ می‌کند
+                        console.log('نقش کاربر شناسایی شده:', this.currentUser.role);
+
+                        const category = this.productCategories.find(c => c.id == categoryId);
                         if (!category) {
-                            productsContainer.innerHTML = '';
+                            productsContainer.innerHTML = '<p class="text-center text-red-500">خطا: دسته‌بندی پیدا نشد!</p>';
                             return;
                         }
 
@@ -965,26 +1092,33 @@
                             this.products = productsData || [];
 
                             let productItems = this.products.map(product => {
+                                // دسترسی فقط برای مدیر
                                 const canModify = this.currentUser.role === 'admin';
                                 const deleteButton = canModify ? `<button onclick="event.stopPropagation(); app.deleteProduct('${product.id}')" class="absolute top-1 right-1 text-xs text-white bg-red-600 hover:bg-red-700 rounded-full w-5 h-5 flex items-center justify-center z-10" title="حذف محصول"><i class="fas fa-times"></i></button>` : '';
                                 const editButton = canModify ? `<button onclick="event.stopPropagation(); app.showProductFormModal('${categoryId}', '${product.id}')" class="absolute top-1 left-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded-full w-5 h-5 flex items-center justify-center z-10" title="ویرایش محصول"><i class="fas fa-pen"></i></button>` : '';
 
                                 return `
-            <div class="relative" onclick="app.showProductDetails('${product.id}')">
-                 ${deleteButton}
-                 ${editButton}
-                <div class="product-circle">
-                    ${product.name}
-                    <br>
-                    <span class="text-xs font-normal">${this.formatPrice(product.price)}</span>
-                </div>
-            </div>`;
+                <div class="relative" onclick="app.showProductDetails('${product.id}')">
+                     ${deleteButton}
+                     ${editButton}
+                    <div class="product-circle">
+                        ${product.name}
+                        <br>
+                        <span class="text-xs font-normal">${this.formatPrice(product.price)}</span>
+                    </div>
+                </div>`;
                             }).join('');
+
+                            let addProductButtonHTML = '';
+                            // دسترسی فقط برای مدیر
+                            if (this.currentUser.role === 'admin') {
+                                addProductButtonHTML = `<button onclick="app.showProductFormModal('${categoryId}')" class="btn-primary px-3 py-1 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن محصول</button>`;
+                            }
 
                             productsContainer.innerHTML = `
             <div class="flex justify-between items-center mb-4">
                 <h4 class="text-lg font-bold text-gray-800">محصولات گروه: ${category.name}</h4>
-                ${this.currentUser.role === 'admin' ? `<button onclick="app.showProductFormModal('${categoryId}')" class="btn-primary px-3 py-1 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>افزودن محصول</button>` : ''}
+                ${addProductButtonHTML}
             </div>
             <div class="flex justify-center gap-6 flex-wrap p-4 bg-gray-50 rounded-lg min-h-[150px]">
                 ${productItems.length > 0 ? productItems : '<p class="text-gray-500 self-center">محصولی در این گروه ثبت نشده است.</p>'}
@@ -996,6 +1130,8 @@
                             productsContainer.innerHTML = `<p class="text-red-500 text-center">خطا در بارگذاری محصولات.</p>`;
                         }
                     },
+
+
 
 
                     showProductDetails(productId) {
@@ -1038,7 +1174,7 @@
 
                             this.closeModal('categoryFormModal');
                             this.showToast(`گروه با موفقیت ${categoryId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
-                            this.refreshCurrentPage(); // Refresh the page to show changes
+
                         } catch (error) {
                             console.error("Error saving category: ", error);
                             this.showToast('خطا در ذخیره گروه.', 'error');
@@ -1047,27 +1183,28 @@
 
                     showProductFormModal(categoryId, productId = null) {
                         const isEdit = productId !== null;
-                        const product = isEdit ? this.products.find(p => p.id === productId) : {};
+                        // Fix: Changed === to == to handle potential mismatch between string and number IDs
+                        const product = isEdit ? this.products.find(p => p.id == productId) : {};
                         const title = isEdit ? 'ویرایش محصول' : 'افزودن محصول جدید';
 
                         const modalHTML = `
-                        <div class="modal-backdrop" id="productFormModal"><div class="modal-content"><form id="productForm">
-                            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('productFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                            <div class="space-y-4">
-                                <div>
-                                    <label class="block text-sm">عکس محصول</label>
-                                    <img id="imagePreview" src="${product.imageUrl || 'https://placehold.co/400x150/cccccc/FFFFFF?text=Select+Image'}" class="w-full h-40 object-cover rounded-md my-2 border">
-                                    <input name="image" type="file" accept="image/*" class="text-sm">
-                                </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><label class="block text-sm">نام محصول</label><input name="name" value="${product.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                                    <div><label class="block text-sm">حجم</label><input name="volume" value="${product.volume || ''}" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                                    <div><label class="block text-sm">قیمت (تومان)</label><input name="price" type="number" value="${product.price || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                                </div>
-                                <div><label class="block text-sm">توضیحات</label><textarea name="description" rows="3" class="mt-1 w-full border border-gray-300 rounded-md p-2">${product.description || ''}</textarea></div>
-                            </div>
-                            <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('productFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
-                        </form></div></div>`;
+        <div class="modal-backdrop" id="productFormModal"><div class="modal-content"><form id="productForm">
+            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('productFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm">عکس محصول</label>
+                    <img id="imagePreview" src="${product.imageUrl || 'https://placehold.co/400x150/cccccc/FFFFFF?text=Select+Image'}" class="w-full h-40 object-cover rounded-md my-2 border">
+                    <input name="image" type="file" accept="image/*" class="text-sm">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm">نام محصول</label><input name="name" value="${product.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                    <div><label class="block text-sm">حجم</label><input name="volume" value="${product.volume || ''}" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                    <div><label class="block text-sm">قیمت (تومان)</label><input name="price" type="number" value="${product.price || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                </div>
+                <div><label class="block text-sm">توضیحات</label><textarea name="description" rows="3" class="mt-1 w-full border border-gray-300 rounded-md p-2">${product.description || ''}</textarea></div>
+            </div>
+            <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('productFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
+        </form></div></div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
                         const imageInput = document.querySelector('input[name="image"]');
@@ -1083,7 +1220,7 @@
 
                         document.getElementById('productForm').onsubmit = (e) => {
                             e.preventDefault();
-                            this.saveProduct(new FormData(e.target), categoryId, productId, imagePreview.src);
+                            this.saveProduct(new FormData(e.target), categoryId, productId);
                         };
                     },
 
@@ -1096,24 +1233,42 @@
                             categoryId: categoryId
                         };
 
+                        // اعتبارسنجی اولیه برای جلوگیری از ثبت محصول بدون نام یا قیمت
+                        if (!productData.name || !productData.price) {
+                            this.showToast('نام محصول و قیمت نمی‌توانند خالی باشند.', 'error');
+                            return;
+                        }
+
                         try {
                             let response;
-                            if (productId) { // ویرایش
+                            if (productId) { // حالت ویرایش
                                 response = await supabase.from('products').update(productData).eq('id', productId);
-                            } else { // افزودن
+                            } else { // حالت افزودن
                                 response = await supabase.from('products').insert([productData]);
                             }
+
                             if (response.error) throw response.error;
+
                             this.closeModal('productFormModal');
+                            this.showToast(`محصول با موفقیت ${productId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
+
+                            // --- کد جدید برای حل مشکل ---
+                            // پس از ذخیره، لیست محصولات را برای گروه فعال، دوباره بارگذاری می‌کند
+                            const activeCategoryElement = document.querySelector(`.category-circle[data-category-id="${categoryId}"]`);
+                            this.showProductsForCategory(categoryId, activeCategoryElement);
+
                         } catch (error) {
                             console.error("Error saving product:", error);
-                            alert('خطا در ذخیره محصول.');
+                            this.showToast('خطا در ذخیره محصول.', 'error');
                         }
                     },
 
+
+
                     showCategoryFormModal(categoryId = null) {
                         const isEdit = categoryId !== null;
-                        const category = isEdit ? this.productCategories.find(c => c.id === categoryId) : {};
+                        // Fix: Changed === to == to handle potential mismatch between string and number IDs
+                        const category = isEdit ? this.productCategories.find(c => c.id == categoryId) : {};
                         const title = isEdit ? 'ویرایش گروه' : 'افزودن گروه جدید';
 
                         const modalHTML = `
@@ -1141,6 +1296,8 @@
                             this.saveCategory(new FormData(e.target), categoryId);
                         };
                     },
+
+
 
                     showOrderHistoryModal(contactId) {
                         const contact = this.contacts.find(c => c.id === contactId);
@@ -1457,49 +1614,46 @@
 
                     showContactFormModal(contactId = null) {
                         const isEdit = contactId !== null;
-                        const contact = isEdit ? this.contacts.find(c => c.id === contactId) : {};
+                        // Fix: Changed === to == to handle potential mismatch between string and number IDs
+                        const contact = isEdit ? this.contacts.find(c => c.id == contactId) : {};
                         const title = isEdit ? 'ویرایش مخاطب' : 'افزودن مخاطب جدید';
 
-                        const companyOptions = this.companies.map(c => `<option value="${c.id}" ${contact.companyId === c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+                        const companyOptions = this.companies.map(c => `<option value="${c.id}" ${contact.companyId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
 
                         let statusOptions = '';
 
-                        // If the contact is already a customer, lock the status.
                         if (contact.status === 'مشتری') {
                             statusOptions = `<option value="مشتری" selected>مشتری (غیرقابل تغییر)</option>`;
                         } else {
-                            // Otherwise, show the standard lead statuses.
                             statusOptions = `
             <option value="سرنخ جدید" ${!contact.status || contact.status === 'سرنخ جدید' ? 'selected' : ''}>سرنخ جدید</option>
             <option value="مذاکره اولیه" ${contact.status === 'مذاکره اولیه' ? 'selected' : ''}>مذاکره اولیه</option>
             <option value="در حال مذاکره" ${contact.status === 'در حال مذاکره' ? 'selected' : ''}>در حال مذاکره</option>
         `;
-                            // ONLY if the user is an admin, add the option to manually set as "Customer".
                             if (this.currentUser.role === 'admin') {
                                 statusOptions += `<option value="مشتری">مشتری</option>`;
                             }
                         }
 
-
                         const modalHTML = `
-        <div class="modal-backdrop" id="contactFormModal">
-            <div class="modal-content">
-                <form id="contactForm">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-900">${title}</h3><button type="button" onclick="app.closeModal('contactFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                    <div class="space-y-4">
-                        <div><label class="block text-sm font-medium text-gray-700">نام کامل</label><input name="name" type="text" value="${contact.name || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                        <div><label class="block text-sm font-medium text-gray-700">شرکت</label><select name="companyId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">بدون شرکت</option>${companyOptions}</select></div>
-                        <div><label class="block text-sm font-medium text-gray-700">شماره تلفن</label><input name="phone" type="tel" value="${contact.phone || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
-                        <div><label class="block text-sm font-medium text-gray-700">وضعیت</label><select name="status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" ${contact.status === 'مشتری' ? 'disabled' : ''}>${statusOptions}</select></div>
-                        <div><label class="block text-sm font-medium text-gray-700">یادداشت</label><textarea name="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${contact.details || ''}</textarea></div>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-4">
-                        <button type="button" onclick="app.closeModal('contactFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
-                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
-                    </div>
-                </form>
-            </div>
-        </div>`;
+    <div class="modal-backdrop" id="contactFormModal">
+        <div class="modal-content">
+            <form id="contactForm">
+                <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold text-gray-900">${title}</h3><button type="button" onclick="app.closeModal('contactFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-gray-700">نام کامل</label><input name="name" type="text" value="${contact.name || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">شرکت</label><select name="companyId" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"><option value="">بدون شرکت</option>${companyOptions}</select></div>
+                    <div><label class="block text-sm font-medium text-gray-700">شماره تلفن</label><input name="phone" type="tel" value="${contact.phone || ''}" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">وضعیت</label><select name="status" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md" ${contact.status === 'مشتری' ? 'disabled' : ''}>${statusOptions}</select></div>
+                    <div><label class="block text-sm font-medium text-gray-700">یادداشت</label><textarea name="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">${contact.details || ''}</textarea></div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" onclick="app.closeModal('contactFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                </div>
+            </form>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
                         document.getElementById('contactForm').onsubmit = (e) => {
@@ -1582,8 +1736,7 @@
                                 const { error: categoryError } = await supabase.from('product_categories').delete().eq('id', categoryId);
                                 if (categoryError) throw categoryError;
 
-                                this.showToast('گروه و محصولات آن با موفقیت حذف شدند.', 'success');
-                                this.refreshCurrentPage();
+
                             } catch (error) {
                                 console.error("Error deleting category: ", error);
                                 this.showToast('خطا در حذف گروه.', 'error');
@@ -1727,34 +1880,7 @@
                         }
                     },
 
-                    showMessageDetailsModal(messageId) {
-                        const messageIndex = this.messages.findIndex(m => m.id === messageId);
-                        if (messageIndex === -1) return;
 
-                        this.messages[messageIndex].read = true; // Mark as read
-                        const message = this.messages[messageIndex];
-                        const sender = this.users[message.sender];
-
-                        const modalHTML = `
-                        <div class="modal-backdrop" id="messageDetailModal">
-                            <div class="modal-content max-w-lg">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-xl font-bold text-gray-900">${message.subject}</h3>
-                                    <button onclick="app.closeModal('messageDetailModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                                </div>
-                                <div class="border-b pb-3 mb-3">
-                                    <p class="text-sm"><strong>از:</strong> ${sender.name}</p>
-                                    <p class="text-sm text-gray-500"><strong>تاریخ:</strong> ${new Date(message.timestamp).toLocaleString('fa-IR')}</p>
-                                </div>
-                                <p class="text-gray-800 leading-relaxed whitespace-pre-wrap">${message.body}</p>
-                                <div class="mt-6 flex justify-end">
-                                    <button onclick="app.closeModal('messageDetailModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">بستن</button>
-                                </div>
-                            </div>
-                        </div>`;
-                        this.modalContainer.innerHTML = modalHTML;
-                        this.refreshCurrentPage(); // Refresh to update read status visually
-                    },
 
                     showComposeMessageModal() {
                         const recipientOptions = Object.keys(this.users)
@@ -2161,8 +2287,109 @@
         </table>
     `;
                     },
-                    generateReportsContent() { return `<div class="card p-6">اینجا صفحه **گزارشات** (تحلیل) برای مدیر است.</div>`; },
-                    generateSettingsContent() { return `<div class="card p-6">اینجا صفحه **تنظیمات** برای مدیر است.</div>`; },
+                    async generateReportsContent() {
+                        // نمای مدیر: مشاهده گزارش همه کاربران
+                        if (this.currentUser.role === 'admin') {
+                            try {
+                                const { data: reports, error } = await supabase.from('reports').select('*').order('report_date', { ascending: false });
+                                if (error) throw error;
+
+                                const reportRows = reports.map(report => {
+                                    const user = this.users[report.user_id];
+                                    return `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">${user ? user.name : 'کاربر حذف شده'}</td>
+                        <td class="px-6 py-4">${this.formatDate(report.report_date)}</td>
+                        <td class="px-6 py-4">${report.report_type === 'daily' ? 'روزانه' : 'هفتگی'}</td>
+                        <td class="px-6 py-4 text-sm whitespace-pre-wrap">${report.report_text}</td>
+                    </tr>
+                `;
+                                }).join('');
+
+                                return `
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">گزارشات ثبت شده کاربران</h3>
+                    <div class="overflow-x-auto border rounded-lg">
+                        <table class="w-full text-sm text-right text-gray-500">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3">کاربر</th>
+                                    <th class="px-6 py-3">تاریخ گزارش</th>
+                                    <th class="px-6 py-3">نوع</th>
+                                    <th class="px-6 py-3">متن گزارش</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${reportRows.length > 0 ? reportRows : '<tr><td colspan="4" class="text-center py-4">هنوز گزارشی ثبت نشده است.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+                            } catch (error) {
+                                console.error('Error fetching all reports:', error);
+                                return '<div class="card p-6 text-red-500">خطا در بارگذاری گزارشات.</div>';
+                            }
+                        }
+                        // نمای کاربر عادی: ثبت گزارش جدید و مشاهده گزارش‌های قبلی خود
+                        else {
+                            try {
+                                const { data: myReports, error } = await supabase.from('reports').select('*').eq('user_id', this.currentUser.id).order('report_date', { ascending: false });
+                                if (error) throw error;
+
+                                const myReportRows = myReports.map(report => `
+                <div class="border-b last:border-none p-3">
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold">${this.formatDate(report.report_date)} - (${report.report_type === 'daily' ? 'روزانه' : 'هفتگی'})</span>
+                        <span class="text-xs text-gray-500">${new Date(report.created_at).toLocaleTimeString('fa-IR')}</span>
+                    </div>
+                    <p class="text-sm mt-2 whitespace-pre-wrap">${report.report_text}</p>
+                </div>
+            `).join('');
+
+                                return `
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1">
+                        <div class="card p-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">ثبت گزارش جدید</h3>
+                            <form id="reportForm">
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-sm font-medium">تاریخ گزارش</label>
+                                        <input type="date" name="report_date" required class="mt-1 w-full border rounded-md p-2">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium mb-2">نوع گزارش</label>
+                                        <div class="flex gap-4">
+                                            <label class="flex items-center"><input type="radio" name="report_type" value="daily" checked class="ml-2">روزانه</label>
+                                            <label class="flex items-center"><input type="radio" name="report_type" value="weekly" class="ml-2">هفتگی</label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium">متن گزارش</label>
+                                        <textarea name="report_text" rows="8" required class="mt-1 w-full border rounded-md p-2"></textarea>
+                                    </div>
+                                    <button type="submit" class="w-full btn-primary py-2 rounded-md">ثبت گزارش</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="card p-6">
+                             <h3 class="text-xl font-bold text-gray-800 mb-4">گزارش‌های قبلی من</h3>
+                             <div class="border rounded-lg max-h-[60vh] overflow-y-auto">
+                                ${myReportRows.length > 0 ? myReportRows : '<p class="p-4 text-center text-gray-500">شما هنوز گزارشی ثبت نکرده‌اید.</p>'}
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+                            } catch (error) {
+                                console.error('Error fetching my reports:', error);
+                                return '<div class="card p-6 text-red-500">خطا در بارگذاری گزارشات شما.</div>';
+                            }
+                        }
+                    },
 
 
                     changeMonth(direction) {
@@ -2178,6 +2405,7 @@
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                     },
 
+                    <!-- ... existing code ... -->
                     renderChequeCalendar() {
                         const container = document.getElementById('cheque-calendar-container');
                         if (!container) return;
@@ -2197,9 +2425,11 @@
 
                         let currentDay = startOfMonth.clone();
                         while (currentDay.isBefore(endOfMonth) || currentDay.isSame(endOfMonth, 'day')) {
-                            // از فرمت دو رقمی استفاده می‌کنیم
                             const dateStr = currentDay.format('jYYYY/MM/DD');
-                            const chequesForDay = this.cheques.filter(c => moment(c.dueDate).format('jYYYY/MM/DD') === dateStr);
+
+                            // --- اصلاح کلیدی اینجاست ---
+                            // به moment می‌گوییم که فرمت تاریخ ذخیره شده در دیتابیس میلادی (YYYY-MM-DD) است
+                            const chequesForDay = this.cheques.filter(c => moment(c.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD') === dateStr);
 
                             let dayClasses = [];
                             if (dateStr === today) dayClasses.push('today');
@@ -2234,6 +2464,102 @@
 
                         html += '</tr></tbody></table>';
                         container.innerHTML = html;
+                    },
+
+                    showChequesForDay(jDateStr) {
+                        const chequesForDay = this.cheques
+                            .filter(c => moment(c.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD') === jDateStr)
+                            .sort((a, b) => a.type.localeCompare(b.type));
+
+                        const chequesHtml = chequesForDay.map(cheque => {
+                            const typeText = cheque.type === 'payable' ? 'پرداختی' : 'دریافتی';
+                            const typeColor = cheque.type === 'payable' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+                            return `
+            <div class="p-3 border-b last:border-none">
+                <div class="flex justify-between items-center">
+                    <span class="font-bold">${this.formatPrice(cheque.amount)}</span>
+                    <span class="text-xs font-medium px-2.5 py-0.5 rounded ${typeColor}">${typeText}</span>
+                </div>
+                <p class="text-sm text-gray-600 mt-1">از ${cheque.from} به ${cheque.to}</p>
+            </div>
+        `;
+                        }).join('');
+
+                        const modalHTML = `
+        <div class="modal-backdrop" id="dayChequesModal">
+            <div class="modal-content max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">چک‌های روز ${jDateStr}</h3>
+                    <button onclick="app.closeModal('dayChequesModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    ${chequesHtml.length > 0 ? chequesHtml : '<p class="text-center text-gray-500">چکی برای این روز ثبت نشده است.</p>'}
+                </div>
+            </div>
+        </div>`;
+                        this.modalContainer.innerHTML = modalHTML;
+                    },
+                    renderChequeHistory() {
+                        const container = document.getElementById('cheque-history-container');
+                        if (!container) return;
+
+                        const sortedCheques = [...this.cheques].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+
+                        const getStatusInfo = (status) => {
+                            switch (status) {
+                                case 'pending': return { text: 'ثبت شده', color: 'bg-gray-200 text-gray-800', nextStatus: 'pending_clearance' };
+                                case 'pending_clearance': return { text: 'در انتظار وصول', color: 'bg-yellow-200 text-yellow-800', nextStatus: 'cleared' };
+                                case 'cleared': return { text: 'پاس شده', color: 'bg-green-200 text-green-800', nextStatus: null };
+                                default: return { text: 'نامشخص', color: 'bg-gray-200', nextStatus: 'pending_clearance' };
+                            }
+                        };
+
+                        const tableRows = sortedCheques.map(cheque => {
+                            const statusInfo = getStatusInfo(cheque.status);
+                            const typeText = cheque.type === 'payable' ? 'پرداختی' : 'دریافتی';
+                            const typeColor = cheque.type === 'payable' ? 'text-blue-600' : 'text-green-600';
+
+                            const approveButton = statusInfo.nextStatus
+                                ? `<button onclick="app.updateChequeStatus('${cheque.id}', '${statusInfo.nextStatus}')" class="font-medium text-green-600 hover:underline"><i class="fas fa-check"></i> تایید</button>`
+                                : `<span class="font-medium text-gray-400"><i class="fas fa-check-double"></i> تکمیل</span>`;
+
+                            const displayDate = moment(cheque.dueDate, 'YYYY-MM-DD').format('jYYYY/jMM/jDD');
+
+                            return `
+        <tr class="bg-white border-b hover:bg-gray-50">
+            <td class="px-4 py-3 cursor-pointer hover:text-blue-600 hover:font-bold" onclick="app.jumpToChequeDate('${cheque.dueDate}')">${displayDate}</td>
+            <td class="px-4 py-3 font-bold ${typeColor}">${typeText}</td>
+            <td class="px-4 py-3 font-bold">${this.formatPrice(cheque.amount)}</td>
+            <td class="px-4 py-3">${cheque.from} به ${cheque.to}</td>
+            <td class="px-4 py-3">${cheque.account_info || '-'}</td>
+            <td class="px-4 py-3"><span class="text-xs font-medium px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
+            <td class="px-4 py-3 text-left">
+                ${approveButton}
+                <button onclick="app.showChequeFormModal('${cheque.id}')" class="font-medium text-blue-600 hover:underline mr-4"><i class="fas fa-edit"></i> ویرایش</button>
+                <button onclick="app.deleteCheque('${cheque.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+            </td>
+        </tr>
+    `;
+                        }).join('');
+
+                        container.innerHTML = `
+    <table class="w-full text-sm text-right">
+        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+            <tr>
+                <th class="px-4 py-3">تاریخ سررسید</th>
+                <th class="px-4 py-3">نوع</th>
+                <th class="px-4 py-3">مبلغ</th>
+                <th class="px-4 py-3">توضیح</th>
+                <th class="px-4 py-3">از کدام حساب</th>
+                <th class="px-4 py-3">وضعیت</th>
+                <th class="px-4 py-3 text-left">عملیات</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${sortedCheques.length > 0 ? tableRows : '<tr><td colspan="7" class="text-center py-4 text-gray-500">هیچ چکی ثبت نشده است.</td></tr>'}
+        </tbody>
+    </table>
+`;
                     },
 
 
@@ -2272,61 +2598,17 @@
                         this.modalContainer.innerHTML = modalHTML;
                     },
 
-                    showChequeFormModal(chequeId = null) {
-                        const isEdit = chequeId !== null;
-                        const cheque = isEdit ? this.cheques.find(c => c.id === chequeId) : {};
-                        const title = isEdit ? 'ویرایش چک' : 'ثبت چک جدید';
-
-                        const modalHTML = `
-        <div class="modal-backdrop" id="chequeFormModal">
-            <div class="modal-content max-w-lg">
-                <form id="chequeForm">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                    <div class="space-y-4">
-                        <div><label class="block text-sm">مبلغ (ریال)</label><input name="amount" type="number" value="${cheque.amount || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                        <div>
-                            <label class="block text-sm mb-2">نوع چک</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center"><input type="radio" name="type" value="receivable" ${cheque.type === 'receivable' || !isEdit ? 'checked' : ''} class="ml-2">دریافتی</label>
-                                <label class="flex items-center"><input type="radio" name="type" value="payable" ${cheque.type === 'payable' ? 'checked' : ''} class="ml-2">پرداختی</label>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" value="${cheque.from || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                            <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" value="${cheque.to || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                        </div>
-                        <div><label class="block text-sm">تاریخ سررسید (مثال: 1404/06/01)</label><input name="dueDate" value="${cheque.dueDate ? moment(cheque.dueDate).format('jYYYY/MM/DD') : ''}" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
-                    </div>
-                    <div class="mt-6 flex justify-end gap-4">
-                        <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
-                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
-                    </div>
-                </form>
-            </div>
-        </div>`;
-                        this.modalContainer.innerHTML = modalHTML;
-
-                        // فرمت خودکار تاریخ
-                        const dueDateInput = document.querySelector('input[name="dueDate"]');
-                        dueDateInput.addEventListener('input', (e) => {
-                            let value = e.target.value.replace(/\D/g, '');
-                            if (value.length > 4) value = value.slice(0, 4) + '/' + value.slice(4);
-                            if (value.length > 7) value = value.slice(0, 7) + '/' + value.slice(7, 9);
-                            e.target.value = value;
-                        });
-
-                        document.getElementById('chequeForm').onsubmit = (e) => {
-                            e.preventDefault();
-                            this.saveCheque(new FormData(e.target), chequeId);
-                        };
-                    },
 
                     async saveCheque(formData, chequeId = null) {
                         const jDateStr = formData.get('dueDate');
-                        // ... (کد اعتبارسنجی تاریخ شما اینجا قرار می‌گیرد) ...
+
+                        if (!/^\d{4}\/\d{2}\/\d{2}$/.test(jDateStr)) {
+                            this.showToast('فرمت تاریخ صحیح نیست. لطفا از فرمت YYYY/MM/DD استفاده کنید.', 'error');
+                            return;
+                        }
                         const parsedDate = moment(jDateStr, 'jYYYY/jMM/jDD');
                         if (!parsedDate.isValid()) {
-                            alert('فرمت تاریخ صحیح نیست.');
+                            this.showToast('تاریخ وارد شده معتبر نیست.', 'error');
                             return;
                         }
                         const gregorianDate = parsedDate.format('YYYY-MM-DD');
@@ -2337,23 +2619,31 @@
                             from: formData.get('from'),
                             to: formData.get('to'),
                             dueDate: gregorianDate,
+                            account_info: formData.get('account_info') || null // Add account info
                         };
+
+                        if (!chequeData.amount || !chequeData.from || !chequeData.to) {
+                            this.showToast('لطفا تمام فیلدها را پر کنید.', 'error');
+                            return;
+                        }
 
                         try {
                             let response;
-                            if (chequeId) { // ویرایش
+                            if (chequeId) {
                                 response = await supabase.from('cheques').update(chequeData).eq('id', chequeId);
-                            } else { // افزودن
+                            } else {
                                 chequeData.status = 'pending';
                                 response = await supabase.from('cheques').insert([chequeData]);
                             }
                             if (response.error) throw response.error;
                             this.closeModal('chequeFormModal');
+                            this.showToast(`چک با موفقیت ${chequeId ? 'ویرایش' : 'ذخیره'} شد.`, 'success');
                         } catch (error) {
                             console.error("Error saving cheque: ", error);
-                            alert('خطا در ذخیره چک.');
+                            this.showToast('خطا در ذخیره چک.', 'error');
                         }
                     },
+
 
                     async deleteCheque(chequeId) {
                         this.showConfirmModal('حذف چک', 'آیا مطمئن هستید؟', async () => {
@@ -2365,6 +2655,7 @@
                             }
                         });
                     },
+
                     // ... بقیه توابع آبجکت app
                     showToast(message, type = 'info', duration = 4000) {
                         const container = document.getElementById('toast-container');
@@ -2410,69 +2701,175 @@
                                 const { error } = await supabase.from('messages').delete().eq('id', messageId);
                                 if (error) throw error;
                                 this.showToast('پیام با موفقیت حذف شد.', 'success');
-                                this.refreshCurrentPage();
+
                             } catch (error) {
                                 console.error("Error deleting message: ", error);
                                 this.showToast('خطا در حذف پیام.', 'error');
                             }
                         });
                     },
+
                     // ... ادامه توابع آبجکت app
 
 
-                    showChequeFormModal() {
+                    showChequeFormModal(chequeId = null) {
+                        const isEdit = chequeId !== null;
+                        const cheque = isEdit ? this.cheques.find(c => c.id == chequeId) : {};
+                        const title = isEdit ? 'ویرایش چک' : 'ثبت چک جدید';
+
+                        const dueDateValue = cheque.dueDate ? moment(cheque.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD') : '';
+
                         const modalHTML = `
-        <div class="modal-backdrop" id="chequeFormModal">
-            <div class="modal-content max-w-lg">
-                <form id="chequeForm">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">ثبت چک جدید</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                    <div class="space-y-4">
-                        <div><label class="block text-sm">مبلغ (ریال)</label><input name="amount" type="number" required class="mt-1 w-full border rounded-md p-2"></div>
-                        <div>
-                            <label class="block text-sm mb-2">نوع چک</label>
-                            <div class="flex gap-4">
-                                <label class="flex items-center"><input type="radio" name="type" value="receivable" checked class="ml-2">دریافتی</label>
-                                <label class="flex items-center"><input type="radio" name="type" value="payable" class="ml-2">پرداختی</label>
-                            </div>
+    <div class="modal-backdrop" id="chequeFormModal">
+        <div class="modal-content max-w-lg">
+            <form id="chequeForm">
+                <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                <div class="space-y-4">
+                    <div><label class="block text-sm">مبلغ (تومان)</label><input name="amount" type="number" value="${cheque.amount || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                    <div>
+                        <label class="block text-sm mb-2">نوع چک</label>
+                        <div class="flex gap-4">
+                            <label class="flex items-center"><input type="radio" name="type" value="receivable" ${cheque.type === 'receivable' || !isEdit ? 'checked' : ''} class="ml-2">دریافتی</label>
+                            <label class="flex items-center"><input type="radio" name="type" value="payable" ${cheque.type === 'payable' ? 'checked' : ''} class="ml-2">پرداختی</label>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" required class="mt-1 w-full border rounded-md p-2"></div>
-                            <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" required class="mt-1 w-full border rounded-md p-2"></div>
-                        </div>
-                        <div><label class="block text-sm">تاریخ سررسید (مثال: 1402/06/30)</label><input name="dueDate" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
                     </div>
-                    <div class="mt-6 flex justify-end gap-4">
-                        <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
-                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                    <div id="accountInfoContainer" style="display: ${cheque.type === 'payable' ? 'block' : 'none'};">
+                        <label class="block text-sm">از کدام حساب</label>
+                        <input name="account_info" value="${cheque.account_info || ''}" class="mt-1 w-full border rounded-md p-2" placeholder="مثال: بانک ملت، شعبه مرکزی، ۱۲۳۴۵۶">
                     </div>
-                </form>
-            </div>
-        </div>`;
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" value="${cheque.from || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                        <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" value="${cheque.to || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                    </div>
+                    <div><label class="block text-sm">تاریخ سررسید (مثال: 1404/01/05)</label><input name="dueDate" value="${dueDateValue}" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
+                </div>
+                <div class="mt-6 flex justify-end gap-4">
+                    <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                </div>
+            </form>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
-                        // --- کد جدید برای فرمت خودکار تاریخ ---
-                        const dueDateInput = document.querySelector('input[name="dueDate"]');
-                        dueDateInput.addEventListener('input', (e) => {
-                            let value = e.target.value.replace(/\D/g, ''); // فقط عددها را نگه می‌دارد
-                            if (value.length > 4) {
-                                value = value.slice(0, 4) + '/' + value.slice(4);
-                            }
-                            if (value.length > 7) {
-                                // فقط دو رقم برای ماه و دو رقم برای روز نگه می‌دارد
-                                value = value.slice(0, 7) + '/' + value.slice(7, 9);
-                            }
-                            e.target.value = value;
+                        // Toggle visibility of account info based on cheque type
+                        const typeRadios = document.querySelectorAll('input[name="type"]');
+                        const accountInfoContainer = document.getElementById('accountInfoContainer');
+                        typeRadios.forEach(radio => {
+                            radio.addEventListener('change', (e) => {
+                                if (e.target.value === 'payable') {
+                                    accountInfoContainer.style.display = 'block';
+                                } else {
+                                    accountInfoContainer.style.display = 'none';
+                                }
+                            });
                         });
-                        // --- پایان کد جدید ---
+
+                        const dueDateInput = document.querySelector('input[name="dueDate"]');
+                        if (dueDateInput) {
+                            dueDateInput.addEventListener('input', (e) => {
+                                let value = e.target.value.replace(/[^0-9]/g, '');
+                                if (value.length > 4) value = value.slice(0, 4) + '/' + value.slice(4);
+                                if (value.length > 7) value = value.slice(0, 7) + '/' + value.slice(7, 9);
+                                e.target.value = value;
+                            });
+                        }
 
                         document.getElementById('chequeForm').onsubmit = (e) => {
                             e.preventDefault();
-                            this.saveCheque(new FormData(e.target));
+                            this.saveCheque(new FormData(e.target), chequeId);
                         };
                     },
 
+                    generateSettingsContent() {
+                        return `
+                    <div class="max-w-2xl mx-auto">
+                        <div class="card p-8">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-6">تنظیمات حساب کاربری</h3>
+                            <form id="settingsForm">
+                                <div class="space-y-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">ایمیل (غیرقابل تغییر)</label>
+                                        <input type="email" value="${this.currentUser.email}" disabled class="mt-1 w-full border bg-gray-100 border-gray-300 rounded-md p-2 cursor-not-allowed">
+                                    </div>
+                                    <div>
+                                        <label for="fullName" class="block text-sm font-medium text-gray-700">نام کامل</label>
+                                        <input id="fullName" name="fullName" type="text" value="${this.currentUser.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2">
+                                    </div>
+                                    <div>
+                                        <label for="username" class="block text-sm font-medium text-gray-700">نام کاربری (فقط حروف انگلیسی و اعداد)</label>
+                                        <input id="username" name="username" type="text" value="${this.currentUser.username || ''}" required pattern="[a-zA-Z0-9]+" class="mt-1 w-full border border-gray-300 rounded-md p-2 ltr">
+                                        <p class="text-xs text-gray-500 mt-1">این نام برای ورود به سیستم استفاده می‌شود.</p>
+                                    </div>
+                                    <hr/>
+                                    <p class="text-md font-semibold text-gray-700">تغییر رمز عبور</p>
+                                    <p class="text-sm text-gray-500 -mt-4">برای تغییر رمز عبور، هر دو فیلد زیر را پر کنید. در غیر این صورت، آن را خالی بگذارید.</p>
+                                    <div>
+                                        <label for="newPassword" class="block text-sm font-medium text-gray-700">رمز عبور جدید</label>
+                                        <input id="newPassword" name="newPassword" type="password" minlength="6" class="mt-1 w-full border border-gray-300 rounded-md p-2">
+                                    </div>
+                                    <div>
+                                        <label for="confirmPassword" class="block text-sm font-medium text-gray-700">تکرار رمز عبور جدید</label>
+                                        <input id="confirmPassword" name="confirmPassword" type="password" class="mt-1 w-full border border-gray-300 rounded-md p-2">
+                                    </div>
+                                </div>
+                                <div class="mt-8 flex justify-end">
+                                    <button type="submit" class="btn-primary px-6 py-2 rounded-md">ذخیره تغییرات</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    `;
+                    },
 
+                    async handleUpdateSettings(formData) {
+                        const fullName = formData.get('fullName');
+                        const username = formData.get('username').toLowerCase();
+                        const newPassword = formData.get('newPassword');
+                        const confirmPassword = formData.get('confirmPassword');
+
+                        if (newPassword && newPassword !== confirmPassword) {
+                            this.showToast('رمزهای عبور جدید با هم مطابقت ندارند!', 'error');
+                            return;
+                        }
+                        if (newPassword && newPassword.length < 6) {
+                            this.showToast('رمز عبور باید حداقل ۶ کاراکتر باشد.', 'error');
+                            return;
+                        }
+
+                        try {
+                            const { error: profileError } = await supabase
+                                .from('profiles')
+                                .update({ full_name: fullName, username: username })
+                                .eq('id', this.currentUser.id);
+
+                            if (profileError) {
+                                if (profileError.code === '23505') {
+                                    this.showToast('این نام کاربری قبلا استفاده شده است.', 'error');
+                                } else {
+                                    throw profileError;
+                                }
+                                return;
+                            }
+
+                            if (newPassword) {
+                                const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
+                                if (authError) throw authError;
+                            }
+
+                            this.showToast('اطلاعات با موفقیت به‌روز شد.', 'success');
+                            this.currentUser.name = fullName;
+                            this.currentUser.username = username;
+                            this.welcomeUser.textContent = `خوش آمدید، ${this.currentUser.name}`;
+
+                        } catch (error) {
+                            console.error('Error updating settings:', error);
+                            this.showToast('خطا در ذخیره تغییرات. لطفا دوباره تلاش کنید.', 'error');
+                        }
+                    }
                 };
+
 
 
                 window.app = app;
@@ -2481,4 +2878,4 @@
         </script>
 </body>
 
-</html>m
+</html>
