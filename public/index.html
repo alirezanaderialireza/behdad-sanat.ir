@@ -442,44 +442,59 @@
                     },
 
                     // این تابع را پیدا کرده و با کد زیر جایگزین کنید
+                    // لطفاً این تابع را به طور کامل با تابع setupSession فعلی در کد خود جایگزین کنید
+
                     async setupSession(user) {
-                        // مرحله ۱: دریافت پروفایل کاربر وارد شده از دیتابیس (نام کاربری هم اضافه شده)
+                        // ۱. دریافت پروفایل کامل کاربر وارد شده
                         let { data: profile, error } = await supabase
                             .from('profiles')
-                            .select('full_name, role, username') // دریافت نام کاربری
+                            .select('id, full_name, role, username, email') // دریافت تمام فیلدها
                             .eq('id', user.id)
                             .single();
 
-                        // مرحله ۲: بررسی خطا
                         if (error || !profile) {
                             console.error('Error fetching profile:', error);
-                            this.showToast('خطا در دریافت اطلاعات پروفایل کاربر. لطفا مطمئن شوید برای این کاربر پروفایل ساخته شده است.', 'error');
+                            this.showToast('خطا در دریافت اطلاعات پروفایل کاربر.', 'error');
                             await this.handleLogout();
                             return;
                         }
 
-                        // مرحله ۳: ذخیره اطلاعات کاربر فعلی در وضعیت برنامه (نام کاربری هم اضافه شده)
+                        // ۲. ذخیره اطلاعات کاربر فعلی در برنامه
                         this.currentUser = {
                             id: user.id,
-                            email: user.email,
+                            email: profile.email,
                             name: profile.full_name,
-                            username: profile.username, // ذخیره نام کاربری
+                            username: profile.username,
                             role: profile.role
                         };
 
-                        // مرحله ۴: بارگذاری لیست تمام کاربران (بدون تغییر)
-                        const { data: profilesRes } = await supabase.from('profiles').select('id, full_name, role');
-                        if (profilesRes) {
-                            this.users = {}; // ابتدا لیست را خالی می‌کنیم
+                        // ۳. دریافت لیست *تمام* کاربران با *تمام* اطلاعات مورد نیاز
+                        const { data: profilesRes, error: allProfilesError } = await supabase
+                            .from('profiles')
+                            .select('id, full_name, role, username, email'); // دریافت تمام فیلدها برای همه
+
+                        if (allProfilesError) {
+                            console.error('Error fetching all profiles:', allProfilesError);
+                            this.showToast('خطا در دریافت لیست کاربران.', 'error');
+                        } else if (profilesRes) {
+                            this.users = {}; // آبجکت کاربران را خالی می‌کنیم
                             profilesRes.forEach(p => {
-                                this.users[p.id] = { name: p.full_name, role: p.role };
+                                // ذخیره تمام اطلاعات برای هر کاربر با استفاده از ID به عنوان کلید
+                                this.users[p.id] = {
+                                    id: p.id,
+                                    name: p.full_name,
+                                    role: p.role,
+                                    username: p.username,
+                                    email: p.email
+                                };
                             });
                         }
 
-                        // مرحله ۵: نمایش داشبورد به کاربر
+                        // ۴. نمایش داشبورد و فعال‌سازی به‌روزرسانی آنی
                         this.showDashboard();
                         this.setupRealtimeSubscriptions();
                     },
+
 
 
                     // --- Authentication ---
