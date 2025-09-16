@@ -2057,53 +2057,52 @@
                             return '<div class="card p-6 text-red-600">شما دسترسی به این بخش را ندارید.</div>';
                         }
 
-                        const userRows = Object.keys(this.users).filter(username => this.users[username] && this.users[username].name).map(username => {
-                            const user = this.users[username];
+                        // `this.users` از قبل در تابع setupSession از جدول `profiles` خوانده شده است
+                        const userRows = Object.values(this.users).map(user => {
                             const roleMap = { admin: 'مدیر', sales: 'کارشناس فروش', accountant: 'حسابدار' };
 
-                            // Admin اصلی قابل حذف یا ویرایش نیست
-                            const actionButtons = username === 'admin'
+                            const actionButtons = user.role === 'admin' && user.email.includes('afra.naderi') // فرض بر اینکه ایمیل اصلی مدیر قابل حذف نیست
                                 ? '<span class="text-gray-400">غیرقابل تغییر</span>'
                                 : `
-                                <button onclick="app.showUserFormModal('${username}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-edit"></i> ویرایش</button>
-                                <button onclick="app.deleteUser('${username}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
-                            `;
+                <button onclick="app.showUserFormModal('${user.id}')" class="font-medium text-blue-600 hover:underline"><i class="fas fa-edit"></i> ویرایش</button>
+                <button onclick="app.deleteUser('${user.id}')" class="font-medium text-red-600 hover:underline mr-4"><i class="fas fa-trash"></i> حذف</button>
+            `;
 
                             return `
-                            <tr class="bg-white border-b">
-                                <td class="px-6 py-4">${user.name}</td>
-                                <td class="px-6 py-4">${username}</td>
-                                <td class="px-6 py-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">${roleMap[user.role] || user.role}</span></td>
-                                <td class="px-6 py-4 text-left">${actionButtons}</td>
-                            </tr>
-                        `;
+            <tr class="bg-white border-b">
+                <td class="px-6 py-4">${user.name}</td>
+                <td class="px-6 py-4">${user.username || '-'}</td>
+                <td class="px-6 py-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded">${roleMap[user.role] || user.role}</span></td>
+                <td class="px-6 py-4 text-left">${actionButtons}</td>
+            </tr>
+        `;
                         }).join('');
 
                         return `
-                        <div class="card p-6">
-                            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                                <h3 class="text-xl font-bold text-gray-800">مدیریت کاربران سیستم</h3>
-                                <button onclick="app.showUserFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
-                                    <i class="fas fa-plus ml-2"></i>افزودن کاربر جدید
-                                </button>
-                            </div>
-                            <div class="overflow-x-auto border rounded-lg">
-                                <table class="w-full text-sm text-right text-gray-500">
-                                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
-                                        <tr>
-                                            <th scope="col" class="px-6 py-3">نام کامل</th>
-                                            <th scope="col" class="px-6 py-3">نام کاربری</th>
-                                            <th scope="col" class="px-6 py-3">نقش</th>
-                                            <th scope="col" class="px-6 py-3 text-left">عملیات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${userRows}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    `;
+        <div class="card p-6">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h3 class="text-xl font-bold text-gray-800">مدیریت کاربران سیستم</h3>
+                <button onclick="app.showUserFormModal()" class="btn-primary w-full md:w-auto px-4 py-2 rounded-md text-sm">
+                    <i class="fas fa-plus ml-2"></i>افزودن کاربر جدید
+                </button>
+            </div>
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-sm text-right text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">نام کامل</th>
+                            <th scope="col" class="px-6 py-3">نام کاربری</th>
+                            <th scope="col" class="px-6 py-3">نقش</th>
+                            <th scope="col" class="px-6 py-3 text-left">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${userRows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
                     },
                     generateTasksContent() { return `<div class="card p-6">اینجا صفحه مدیریت **وظایف** برای کارشناس فروش است.</div>`; },
                     showUserFormModal(userId = null) {
@@ -2111,27 +2110,23 @@
                         const user = isEdit ? this.users[userId] : {};
                         const title = isEdit ? `ویرایش کاربر: ${user.name}` : 'افزودن کاربر جدید';
 
-                        // پیدا کردن اطلاعات کاربر از آبجکت users با استفاده از userId
-                        const userProfile = isEdit ? Object.values(this.users).find(u => u.id === userId) || {} : {};
-
-
                         const modalHTML = `
         <div class="modal-backdrop" id="userFormModal">
             <div class="modal-content max-w-lg">
                 <form id="userForm">
                     <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('userFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
                     <div class="space-y-4">
-                        <div><label class="block text-sm">نام کامل</label><input name="fullName" value="${userProfile.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                        <div><label class="block text-sm">نام کامل</label><input name="fullName" value="${user.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
                         <div><label class="block text-sm">نقش</label>
                             <select name="role" required class="mt-1 w-full border border-gray-300 rounded-md p-2">
-                                <option value="sales" ${userProfile.role === 'sales' ? 'selected' : ''}>کارشناس فروش</option>
-                                <option value="accountant" ${userProfile.role === 'accountant' ? 'selected' : ''}>حسابدار</option>
-                                <option value="admin" ${userProfile.role === 'admin' ? 'selected' : ''}>مدیر</option>
+                                <option value="sales" ${user.role === 'sales' ? 'selected' : ''}>کارشناس فروش</option>
+                                <option value="accountant" ${user.role === 'accountant' ? 'selected' : ''}>حسابدار</option>
+                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>مدیر</option>
                             </select>
                         </div>
                         <hr/>
-                        <div><label class="block text-sm">نام کاربری (فقط حروف انگلیسی)</label><input name="username" value="${userProfile.username || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
-                        <div><label class="block text-sm">ایمیل</label><input name="email" type="email" value="${userProfile.email || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
+                        <div><label class="block text-sm">نام کاربری (فقط حروف انگلیسی)</label><input name="username" value="${user.username || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
+                        <div><label class="block text-sm">ایمیل</label><input name="email" type="email" value="${user.email || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
                         <div><label class="block text-sm">رمز عبور ${isEdit ? '(در صورت خالی بودن، تغییر نمی‌کند)' : ''}</label><input name="password" type="password" ${!isEdit ? 'required' : ''} minlength="6" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
                     </div>
                     <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('userFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
@@ -2203,18 +2198,28 @@
                     },
 
 
-                    async deleteUser(username) {
-                        // ... (کد بررسی‌ها مثل قبل باقی می‌ماند) ...
-                        this.showConfirmModal('حذف کاربر', 'آیا مطمئن هستید؟', async () => {
+                    async deleteUser(userId) {
+                        // اینجا از تابع ConfirmModal که قبلاً ساخته‌ایم استفاده می‌کنیم
+                        this.showConfirmModal('حذف کاربر', 'آیا از حذف این کاربر اطمینان دارید؟ این عمل غیرقابل بازگشت است.', async () => {
                             try {
-                                const { error } = await supabase.from('users').delete().eq('username', username);
+                                // **اینجا مهم‌ترین تغییر است: به جای `users` از `profiles` استفاده می‌کنیم**
+                                const { error } = await supabase.from('profiles').delete().eq('id', userId);
+
+                                // توجه: این کار فقط پروفایل را حذف می‌کند. خود کاربر همچنان در بخش Authentication وجود خواهد داشت.
+                                // حذف کامل کاربر از Authentication نیاز به یک Edge Function دیگر دارد.
+
                                 if (error) throw error;
-                                alert('کاربر با موفقیت حذف شد.');
+
+                                this.showToast('پروفایل کاربر با موفقیت حذف شد.', 'success');
+                                // نیازی به رفرش دستی نیست، Realtime این کار را انجام می‌دهد.
+
                             } catch (error) {
-                                console.error("Error deleting user:", error);
+                                console.error("Error deleting user profile: ", error);
+                                this.showToast('خطا در حذف پروفایل کاربر.', 'error');
                             }
                         });
                     },
+
                     async generateChequesContent() {
                         if (this.currentUser.role !== 'admin' && this.currentUser.role !== 'accountant') {
                             return '<div class="card p-6 text-red-600">شما دسترسی به این بخش را ندارید.</div>';
