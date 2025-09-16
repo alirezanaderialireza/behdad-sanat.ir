@@ -444,6 +444,8 @@
                     // این تابع را پیدا کرده و با کد زیر جایگزین کنید
                     // لطفاً این تابع را به طور کامل با تابع setupSession فعلی در کد خود جایگزین کنید
 
+                    // لطفاً این تابع را به طور کامل با تابع setupSession فعلی در کد خود جایگزین کنید
+
                     async setupSession(user) {
                         // ۱. دریافت پروفایل کامل کاربر وارد شده با نام ستون صحیح
                         let { data: profile, error } = await supabase
@@ -493,6 +495,7 @@
                         this.showDashboard();
                         this.setupRealtimeSubscriptions();
                     },
+
 
 
 
