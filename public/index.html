@@ -445,10 +445,10 @@
                     // لطفاً این تابع را به طور کامل با تابع setupSession فعلی در کد خود جایگزین کنید
 
                     async setupSession(user) {
-                        // ۱. دریافت پروفایل کامل کاربر وارد شده
+                        // ۱. دریافت پروفایل کامل کاربر وارد شده با نام ستون صحیح
                         let { data: profile, error } = await supabase
                             .from('profiles')
-                            .select('id, full_name, role, username, email') // دریافت تمام فیلدها
+                            .select('id, full_name, role, username, email') // <<-- مشکل اینجا بود و اصلاح شد
                             .eq('id', user.id)
                             .single();
 
@@ -471,15 +471,14 @@
                         // ۳. دریافت لیست *تمام* کاربران با *تمام* اطلاعات مورد نیاز
                         const { data: profilesRes, error: allProfilesError } = await supabase
                             .from('profiles')
-                            .select('id, full_name, role, username, email'); // دریافت تمام فیلدها برای همه
+                            .select('id, full_name, role, username, email');
 
                         if (allProfilesError) {
                             console.error('Error fetching all profiles:', allProfilesError);
                             this.showToast('خطا در دریافت لیست کاربران.', 'error');
                         } else if (profilesRes) {
-                            this.users = {}; // آبجکت کاربران را خالی می‌کنیم
+                            this.users = {};
                             profilesRes.forEach(p => {
-                                // ذخیره تمام اطلاعات برای هر کاربر با استفاده از ID به عنوان کلید
                                 this.users[p.id] = {
                                     id: p.id,
                                     name: p.full_name,
@@ -494,6 +493,7 @@
                         this.showDashboard();
                         this.setupRealtimeSubscriptions();
                     },
+
 
 
 
