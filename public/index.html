@@ -2106,69 +2106,102 @@
                     `;
                     },
                     generateTasksContent() { return `<div class="card p-6">اینجا صفحه مدیریت **وظایف** برای کارشناس فروش است.</div>`; },
-                    showUserFormModal(username = null) {
-                        const isEdit = username !== null;
-                        const user = isEdit ? this.users[username] : {};
-                        const title = isEdit ? `ویرایش کاربر: ${username}` : 'افزودن کاربر جدید';
+                    showUserFormModal(userId = null) {
+                        const isEdit = userId !== null;
+                        const user = isEdit ? this.users[userId] : {};
+                        const title = isEdit ? `ویرایش کاربر: ${user.name}` : 'افزودن کاربر جدید';
+
+                        // پیدا کردن اطلاعات کاربر از آبجکت users با استفاده از userId
+                        const userProfile = isEdit ? Object.values(this.users).find(u => u.id === userId) || {} : {};
+
 
                         const modalHTML = `
-                        <div class="modal-backdrop" id="userFormModal">
-                            <div class="modal-content max-w-lg">
-                                <form id="userForm">
-                                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('userFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                                    <div class="space-y-4">
-                                        <div><label class="block text-sm">نام کامل</label><input name="name" value="${user.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                                        <div><label class="block text-sm">نقش</label>
-                                            <select name="role" required class="mt-1 w-full border border-gray-300 rounded-md p-2">
-                                                <option value="sales" ${user.role === 'sales' ? 'selected' : ''}>کارشناس فروش</option>
-                                                <option value="accountant" ${user.role === 'accountant' ? 'selected' : ''}>حسابدار</option>
-                                                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>مدیر</option>
-                                            </select>
-                                        </div>
-                                        <hr/>
-                                        <div><label class="block text-sm">نام کاربری (فقط حروف انگلیسی)</label><input name="username" value="${username || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
-                                        <div><label class="block text-sm">رمز عبور ${isEdit ? '(در صورت خالی بودن، تغییر نمی‌کند)' : ''}</label><input name="password" type="password" ${!isEdit ? 'required' : ''} class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                                    </div>
-                                    <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('userFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
-                                </form>
-                            </div>
-                        </div>`;
+        <div class="modal-backdrop" id="userFormModal">
+            <div class="modal-content max-w-lg">
+                <form id="userForm">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('userFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+                    <div class="space-y-4">
+                        <div><label class="block text-sm">نام کامل</label><input name="fullName" value="${userProfile.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                        <div><label class="block text-sm">نقش</label>
+                            <select name="role" required class="mt-1 w-full border border-gray-300 rounded-md p-2">
+                                <option value="sales" ${userProfile.role === 'sales' ? 'selected' : ''}>کارشناس فروش</option>
+                                <option value="accountant" ${userProfile.role === 'accountant' ? 'selected' : ''}>حسابدار</option>
+                                <option value="admin" ${userProfile.role === 'admin' ? 'selected' : ''}>مدیر</option>
+                            </select>
+                        </div>
+                        <hr/>
+                        <div><label class="block text-sm">نام کاربری (فقط حروف انگلیسی)</label><input name="username" value="${userProfile.username || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
+                        <div><label class="block text-sm">ایمیل</label><input name="email" type="email" value="${userProfile.email || ''}" ${isEdit ? 'disabled' : ''} required class="mt-1 w-full border border-gray-300 rounded-md p-2 ${isEdit ? 'bg-gray-100' : ''}"></div>
+                        <div><label class="block text-sm">رمز عبور ${isEdit ? '(در صورت خالی بودن، تغییر نمی‌کند)' : ''}</label><input name="password" type="password" ${!isEdit ? 'required' : ''} minlength="6" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('userFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button></div>
+                </form>
+            </div>
+        </div>`;
                         this.modalContainer.innerHTML = modalHTML;
                         document.getElementById('userForm').onsubmit = (e) => {
                             e.preventDefault();
-                            this.saveUser(new FormData(e.target), username);
+                            this.saveUser(new FormData(e.target), userId);
                         };
                     },
-
-                    async saveUser(formData, existingUsername) {
-                        const username = existingUsername || formData.get('username');
+                    async saveUser(formData, existingUserId) {
+                        const isEdit = existingUserId !== null;
                         const password = formData.get('password');
 
-                        const userData = {
-                            name: formData.get('name'),
-                            role: formData.get('role'),
-                            username: username
+                        const newUserDetails = {
+                            email: formData.get('email'),
+                            password: formData.get('password'),
+                            fullName: formData.get('fullName'),
+                            username: formData.get('username'),
+                            role: formData.get('role')
                         };
 
-                        if (password) {
-                            userData.password = password;
+                        // اعتبارسنجی اولیه
+                        if (!isEdit && (!newUserDetails.email || !newUserDetails.password || !newUserDetails.fullName || !newUserDetails.username)) {
+                            this.showToast('لطفا تمام فیلدها را برای کاربر جدید پر کنید.', 'error');
+                            return;
+                        }
+                        if (!isEdit && password.length < 6) {
+                            this.showToast('رمز عبور باید حداقل ۶ کاراکتر باشد.', 'error');
+                            return;
                         }
 
                         try {
-                            let response;
-                            if (existingUsername) { // ویرایش
-                                response = await supabase.from('users').update(userData).eq('username', existingUsername);
-                            } else { // افزودن
-                                response = await supabase.from('users').insert([userData]);
+                            let resultMessage = '';
+                            if (isEdit) {
+                                // TODO: قابلیت ویرایش کاربر نیاز به یک فانکشن جداگانه دارد
+                                this.showToast('قابلیت ویرایش کاربر در حال حاضر پیاده‌سازی نشده است.', 'info');
+
+                            } else {
+                                // فراخوانی Edge Function برای ساخت کاربر جدید
+                                const { data, error } = await supabase.functions.invoke('create-user', {
+                                    body: { newUser: newUserDetails },
+                                });
+
+                                if (error) {
+                                    // اگر خطا از سمت فانکشن باشد، آن را به عنوان یک خطای واقعی پرتاب می‌کنیم
+                                    const errorData = await error.context.json();
+                                    throw new Error(errorData.error);
+                                }
+                                resultMessage = data.message;
                             }
-                            if (response.error) throw response.error;
+
                             this.closeModal('userFormModal');
-                            alert(`کاربر ${username} با موفقیت ${existingUsername ? 'ویرایش' : 'ایجاد'} شد.`);
+                            this.showToast(resultMessage, 'success');
+                            // نیازی به رفرش دستی نیست، Realtime این کار را انجام می‌دهد
+
                         } catch (err) {
                             console.error("Error saving user: ", err);
-                            alert('خطا در ذخیره کاربر.');
+                            // نمایش پیام خطای دریافتی از فانکشن
+                            const errorMessage = err.message.includes('User already registered')
+                                ? 'کاربری با این ایمیل قبلا ثبت‌نام کرده است.'
+                                : err.message.includes('duplicate key value violates unique constraint')
+                                    ? 'این نام کاربری قبلا استفاده شده است.'
+                                    : 'خطا در ذخیره کاربر. لطفا دوباره تلاش کنید.';
+                            this.showToast(errorMessage, 'error');
                         }
                     },
+
 
                     async deleteUser(username) {
                         // ... (کد بررسی‌ها مثل قبل باقی می‌ماند) ...
