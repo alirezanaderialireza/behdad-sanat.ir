@@ -500,10 +500,10 @@
                     // لطفاً این تابع را به طور کامل با تابع setupSession فعلی در کد خود جایگزین کنید
 
                     async setupSession(user) {
-                        // ۱. دریافت پروفایل کامل کاربر وارد شده با نام ستون صحیح
+                        // ۱. دریافت پروفایل کاربر وارد شده
                         let { data: profile, error } = await supabase
                             .from('profiles')
-                            .select('id, full_name, role, username, email') // <<-- مشکل اینجا بود و اصلاح شد
+                            .select('id, full_name, role, username, email')
                             .eq('id', user.id)
                             .single();
 
@@ -514,7 +514,7 @@
                             return;
                         }
 
-                        // ۲. ذخیره اطلاعات کاربر فعلی در برنامه
+                        // ۲. ذخیره اطلاعات کاربر فعلی
                         this.currentUser = {
                             id: user.id,
                             email: profile.email,
@@ -523,32 +523,32 @@
                             role: profile.role
                         };
 
-                        // ۳. دریافت لیست *تمام* کاربران با *تمام* اطلاعات مورد نیاز
-                        const { data: profilesRes, error: allProfilesError } = await supabase
-                            .from('profiles')
-                            .select('id, full_name, role, username, email');
+                        // ۳. فراخوانی همزمان تمام داده‌های اولیه مورد نیاز برنامه
+                        const [profilesRes, contactsRes, companiesRes] = await Promise.all([
+                            supabase.from('profiles').select('id, full_name, role, username, email'),
+                            supabase.from('contacts').select('*'),
+                            supabase.from('companies').select('*')
+                        ]);
 
-                        if (allProfilesError) {
-                            console.error('Error fetching all profiles:', allProfilesError);
-                            this.showToast('خطا در دریافت لیست کاربران.', 'error');
-                        } else if (profilesRes) {
+                        // پردازش لیست کاربران
+                        if (profilesRes.error) {
+                            console.error('Error fetching all profiles:', profilesRes.error);
+                        } else if (profilesRes.data) {
                             this.users = {};
-                            profilesRes.forEach(p => {
-                                this.users[p.id] = {
-                                    id: p.id,
-                                    name: p.full_name,
-                                    role: p.role,
-                                    username: p.username,
-                                    email: p.email
-                                };
+                            profilesRes.data.forEach(p => {
+                                this.users[p.id] = { id: p.id, name: p.full_name, role: p.role, username: p.username, email: p.email };
                             });
                         }
 
-                        // ۴. نمایش داشبورد و فعال‌سازی به‌روزرسانی آنی
+                        // ذخیره لیست مخاطبین و شرکت‌ها
+                        this.contacts = contactsRes.data || [];
+                        this.companies = companiesRes.data || [];
+
+
+                        // ۴. نمایش داشبور و فعال‌سازی به‌روزرسانی آنی
                         this.showDashboard();
                         this.setupRealtimeSubscriptions();
                     },
-
 
 
 
@@ -1030,29 +1030,30 @@
                     },
                     showCompanyFormModal(companyId = null) {
                         const isEdit = companyId !== null;
-                        // Fix: Changed === to == to handle potential mismatch between string and number IDs
                         const company = isEdit ? this.companies.find(c => c.id == companyId) : {};
                         const title = isEdit ? 'ویرایش شرکت' : 'افزودن شرکت جدید';
 
                         const modalHTML = `
-    <div class="modal-backdrop" id="companyFormModal">
-        <div class="modal-content max-w-lg">
-            <form id="companyForm">
-                <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('companyFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                <div class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm">نام شرکت</label><input name="name" value="${company.name || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                        <div><label class="block text-sm">صنعت</label><input name="industry" value="${company.industry || ''}" class="mt-1 w-full border rounded-md p-2"></div>
-                    </div>
-                    <div><label class="block text-sm">تلفن</label><input name="phone" value="${company.phone || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+<div class="modal-backdrop" id="companyFormModal">
+    <div class="modal-content max-w-lg">
+        <form id="companyForm">
+            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('companyFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm">نام شرکت</label><input name="name" value="${company.name || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                    <div><label class="block text-sm">صنعت</label><input name="industry" value="${company.industry || ''}" class="mt-1 w-full border rounded-md p-2"></div>
                 </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" onclick="app.closeModal('companyFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
-                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
-                </div>
-            </form>
-        </div>
-    </div>`;
+                <div><label class="block text-sm">تلفن</label><input name="phone" value="${company.phone || ''}" class="mt-1 w-full border rounded-md p-2"></div>
+                
+                <div><label class="block text-sm">آدرس</label><textarea name="address" rows="3" class="mt-1 w-full border rounded-md p-2">${company.address || ''}</textarea></div>
+            </div>
+            <div class="mt-6 flex justify-end gap-4">
+                <button type="button" onclick="app.closeModal('companyFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
                         document.getElementById('companyForm').onsubmit = (e) => {
@@ -1061,11 +1062,14 @@
                         };
                     },
 
+                    // تابع دوم برای جایگزینی
+
                     async saveCompany(formData, companyId) {
                         const companyData = {
                             name: formData.get('name'),
                             industry: formData.get('industry'),
                             phone: formData.get('phone'),
+                            address: formData.get('address') // ذخیره آدرس
                         };
 
                         try {
@@ -1519,8 +1523,11 @@
                         }
                     },
                     showSaleFormModal(orderId = null) {
-                        // For simplicity, we assume we are creating a new invoice. Edit functionality can be added later.
-                        const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        // *** تغییر: فیلتر حذف شد تا تمام مخاطبین، از جمله سرنخ جدید، نمایش داده شوند ***
+                        const contactOptions = this.contacts
+                            .map(c => `<option value="${c.id}">${c.name}</option>`)
+                            .join('');
+
                         const productOptions = this.products.map(p => `<option value="${p.id}">${p.name} - ${this.formatPrice(p.price)}</option>`).join('');
 
                         // Default seller info (can be made dynamic later)
