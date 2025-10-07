@@ -1467,256 +1467,340 @@
                     },
                     async generateSalesContent() {
                         try {
-                            // ۱. فراخوانی داده‌های مورد نیاز
-                            const [
-                                { data: salesOrdersData, error: salesError },
-                                { data: contactsData, error: contactsError }
-                            ] = await Promise.all([
-                                supabase.from('sales_orders').select('*'),
-                                supabase.from('contacts').select('id, name')
-                            ]);
+                            const { data: salesOrdersData, error } = await supabase.from('sales_orders').select('*').order('orderDate', { ascending: false });
+                            if (error) throw error;
 
-                            if (salesError || contactsError) throw salesError || contactsError;
-
-                            // ۲. به‌روزرسانی وضعیت برنامه
                             this.salesOrders = salesOrdersData || [];
-                            const contactsMap = (contactsData || []).reduce((map, contact) => {
-                                map[contact.id] = contact.name;
-                                return map;
-                            }, {});
+                            // Pre-fetch all products for invoice details
+                            const { data: productsData } = await supabase.from('products').select('id, name');
+                            this.products = productsData || [];
 
-                            // ۳. بقیه کد شما برای ساخت HTML
                             let ordersToShow = this.salesOrders;
                             if (this.currentUser.role === 'accountant') {
                                 ordersToShow = this.salesOrders.filter(o => o.status === 'completed');
                             }
 
-                            const tableRows = ordersToShow.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate)).map(order => {
-                                const contactName = contactsMap[order.contactId] || 'حذف شده';
-                                const salesperson = this.users[order.created_by];
+                            const tableRows = ordersToShow.map(order => {
                                 const statusInfo = this.getPersianStatus(order.status);
-
                                 return `
-                <tr class="bg-white border-b hover:bg-gray-50">
-                    <td class="px-6 py-4">#${order.id}</td>
-                    <td class="px-6 py-4">${contactName}</td>
-                    <td class="px-6 py-4">${salesperson ? salesperson.name : 'نامشخص'}</td>
-                    <td class="px-6 py-4">${this.formatDate(order.orderDate)}</td>
-                    <td class="px-6 py-4 font-bold">${this.formatPrice(order.totalPrice)}</td>
-                    <td class="px-6 py-4"><span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
-                </tr>
-            `;
+            <tr class="bg-white border-b hover:bg-gray-50 cursor-pointer" onclick="app.showInvoiceDetailModal(${order.id})">
+                <td class="px-6 py-4">${order.invoice_number || `#${order.id}`}</td>
+                <td class="px-6 py-4">${order.buyer_info?.name || 'خریدار حذف شده'}</td>
+                <td class="px-6 py-4">${this.users[order.created_by]?.name || 'نامشخص'}</td>
+                <td class="px-6 py-4">${this.formatDate(order.orderDate)}</td>
+                <td class="px-6 py-4 font-bold">${this.formatPrice(order.totalPrice)}</td>
+                <td class="px-6 py-4"><span class="text-xs font-medium mr-2 px-2.5 py-0.5 rounded ${statusInfo.color}">${statusInfo.text}</span></td>
+            </tr>`;
                             }).join('');
 
                             return `
-            <div class="card p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-800">تاریخچه فروش</h3>
-                    ${this.currentUser.role !== 'accountant' ? `<button onclick="app.showSaleFormModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>ثبت فروش جدید</button>` : ''}
-                </div>
-                <div class="overflow-x-auto border rounded-lg">
-                    <table class="w-full text-sm text-right">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-100">
-                            <tr>
-                                <th class="px-6 py-3">شماره</th>
-                                <th class="px-6 py-3">خریدار</th>
-                                <th class="px-6 py-3">فروشنده</th>
-                                <th class="px-6 py-3">تاریخ</th>
-                                <th class="px-6 py-3">مبلغ کل</th>
-                                <th class="px-6 py-3">وضعیت</th>
-                            </tr>
-                        </thead>
-                        <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="text-center py-4 text-gray-500">هیچ فروشی ثبت نشده است.</td></tr>'}</tbody>
-                    </table>
-                </div>
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">تاریخچه فروش</h3>
+                ${this.currentUser.role !== 'accountant' ? `<button onclick="app.showSaleFormModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>صدور فاکتور جدید</button>` : ''}
             </div>
-        `;
+            <div class="overflow-x-auto border rounded-lg">
+                <table class="w-full text-sm text-right">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-100"><tr>
+                        <th class="px-6 py-3">شماره فاکتور</th>
+                        <th class="px-6 py-3">خریدار</th>
+                        <th class="px-6 py-3">فروشنده</th>
+                        <th class="px-6 py-3">تاریخ</th>
+                        <th class="px-6 py-3">مبلغ کل</th>
+                        <th class="px-6 py-3">وضعیت</th>
+                    </tr></thead>
+                    <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="text-center py-4">هیچ فروشی ثبت نشده است.</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>`;
                         } catch (error) {
                             console.error('Error generating sales content:', error);
                             return `<div class="card p-6 text-red-500">خطا در بارگذاری اطلاعات فروش.</div>`;
                         }
                     },
                     showSaleFormModal(orderId = null) {
-                        const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name} - ${this.companies.find(co => co.id === c.companyId)?.name || 'بدون شرکت'}</option>`).join('');
-                        const productOptions = this.products.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+                        // For simplicity, we assume we are creating a new invoice. Edit functionality can be added later.
+                        const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        const productOptions = this.products.map(p => `<option value="${p.id}">${p.name} - ${this.formatPrice(p.price)}</option>`).join('');
+
+                        // Default seller info (can be made dynamic later)
+                        const sellerInfo = {
+                            name: 'شرکت بهداد صنعت جنوب',
+                            address: 'آدرس شرکت شما',
+                            phone: 'شماره تماس شما',
+                            economic_code: 'کد اقتصادی شما'
+                        };
 
                         const modalHTML = `
-                        <div class="modal-backdrop" id="saleFormModal">
-                            <div class="modal-content">
-                                <form id="saleForm">
-                                    <div class="flex justify-between items-center mb-6">
-                                        <h3 class="text-xl font-bold text-gray-900">فاکتور فروش جدید</h3>
-                                        <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                                    </div>
-                                    
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700">نام خانوادگی (مشتری)</label>
-                                            <select name="contactId" id="saleContactSelect" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md">
-                                                <option value="" disabled selected>یک مخاطب را انتخاب کنید...</option>
-                                                ${contactOptions}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-sm font-medium text-gray-700">نام شرکت</label>
-                                            <input type="text" id="saleCompanyName" readonly class="mt-1 block w-full px-3 py-2 border border-gray-200 bg-gray-100 rounded-md">
-                                        </div>
-                                    </div>
+    <div class="modal-backdrop" id="saleFormModal">
+        <div class="modal-content max-w-4xl">
+            <form id="saleForm">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900">صدور فاکتور فروش استاندارد</h3>
+                    <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div class="border p-4 rounded-lg space-y-2 bg-gray-50">
+                        <h4 class="font-bold">اطلاعات فروشنده</h4>
+                        <div><label class="text-sm">نام شرکت:</label><input name="seller_name" value="${sellerInfo.name}" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                        <div><label class="text-sm">آدرس:</label><input name="seller_address" value="${sellerInfo.address}" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                        <div><label class="text-sm">شماره تماس:</label><input name="seller_phone" value="${sellerInfo.phone}" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                    </div>
+                    <div class="border p-4 rounded-lg space-y-2">
+                        <h4 class="font-bold">اطلاعات خریدار</h4>
+                        <div>
+                            <label class="text-sm">انتخاب مشتری:</label>
+                            <select name="contactId" id="saleContactSelect" required class="mt-1 w-full border rounded p-2 text-sm">
+                                <option value="" disabled selected>یک مخاطب را انتخاب کنید...</option>
+                                ${contactOptions}
+                            </select>
+                        </div>
+                        <div><label class="text-sm">آدرس:</label><input name="buyer_address" id="buyer_address" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                        <div><label class="text-sm">شماره تماس:</label><input name="buyer_phone" id="buyer_phone" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                    </div>
+                </div>
 
-                                    <div class="border rounded-lg p-4 my-4">
-                                        <h4 class="font-bold mb-3">افزودن محصول</h4>
-                                        <div class="grid grid-cols-12 gap-2 items-end">
-                                            <div class="col-span-5"><label class="text-sm">جستجو محصول</label><select id="invoiceProduct" class="w-full mt-1 border border-gray-300 rounded-md p-2">${productOptions}</select></div>
-                                            <div class="col-span-2"><label class="text-sm">مقدار</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border border-gray-300 rounded-md p-2 text-center"></div>
-                                            <div class="col-span-3"><label class="text-sm">تخفیف (تومان)</label><input type="number" id="invoiceDiscount" value="0" min="0" class="w-full mt-1 border border-gray-300 rounded-md p-2 text-center"></div>
-                                            <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
-                                        </div>
-                                    </div>
+                <div class="border rounded-lg p-4 my-4">
+                    <h4 class="font-bold mb-3">افزودن محصول به فاکتور</h4>
+                    <div class="grid grid-cols-12 gap-2 items-end">
+                        <div class="col-span-6"><label class="text-sm">محصول</label><select id="invoiceProduct" class="w-full mt-1 border rounded p-2 text-sm">${productOptions}</select></div>
+                        <div class="col-span-2"><label class="text-sm">تعداد</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border rounded p-2 text-sm text-center"></div>
+                        <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
+                    </div>
+                </div>
 
-                                    <h4 class="font-bold mb-2">لیست محصولات فاکتور</h4>
-                                    <div class="border rounded-lg max-h-48 overflow-y-auto">
-                                        <table class="w-full text-sm">
-                                            <thead class="bg-gray-100 text-xs text-gray-700 uppercase"><tr class="text-right"><th class="p-2">ردیف</th><th class="p-2">عنوان</th><th class="p-2">مقدار</th><th class="p-2">مبلغ واحد</th><th class="p-2">تخفیف</th><th class="p-2">مبلغ نهایی</th><th class="p-2"></th></tr></thead>
-                                            <tbody id="invoiceItemsTable">
-                                                <tr><td colspan="7" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <div class="bg-gray-100 p-2 rounded-md mt-2 flex justify-between items-center text-sm font-bold">
-                                        <div>مجموع تعداد محصولات: <span id="invoiceTotalQuantity">۰</span></div>
-                                        <div>جمع مبلغ: <span id="invoiceTotalAmount">۰ تومان</span></div>
-                                    </div>
+                <h4 class="font-bold mb-2">لیست محصولات فاکتور</h4>
+                <div class="border rounded-lg max-h-48 overflow-y-auto">
+                    <table class="w-full text-sm"><thead class="bg-gray-100 text-xs uppercase"><tr class="text-right"><th class="p-2">#</th><th class="p-2">شرح</th><th class="p-2">تعداد</th><th class="p-2">قیمت واحد</th><th class="p-2">مبلغ کل</th><th class="p-2"></th></tr></thead>
+                        <tbody id="invoiceItemsTable"><tr><td colspan="6" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr></tbody>
+                    </table>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div class="space-y-2">
+                         <div><label class="text-sm">تاریخ سررسید:</label><input name="due_date" type="date" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                    </div>
+                    <div class="space-y-2 text-sm p-4 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between"><span>جمع کل (قبل از تخفیف):</span><span id="invoiceSubtotal">۰ تومان</span></div>
+                        <div class="flex justify-between items-center">
+                            <label>تخفیف (تومان):</label>
+                            <input name="discount" id="invoiceDiscount" type="number" value="0" min="0" class="w-1/2 border rounded p-1 text-left ltr">
+                        </div>
+                        <div class="flex justify-between"><span>مالیات (۹٪):</span><span id="invoiceTax">۰ تومان</span></div>
+                        <hr class="my-1 border-gray-300">
+                        <div class="flex justify-between font-bold text-lg"><span>مبلغ نهایی:</span><span id="invoiceTotalAmount">۰ تومان</span></div>
+                    </div>
+                </div>
 
-                                    <div class="mt-6 flex justify-end gap-4">
-                                        <button type="button" onclick="app.closeModal('saleFormModal')" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">لغو</button>
-                                        <button type="submit" class="btn-primary px-4 py-2 rounded-md">ثبت فاکتور</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>`;
+                <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('saleFormModal')" class="px-4 py-2 bg-gray-200 rounded">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded">ثبت فاکتور</button></div>
+            </form>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
                         this.setupSaleFormListeners();
                     },
 
-                    setupSaleFormListeners() {
-                        let invoiceItems = [];
-                        const contactSelect = document.getElementById('saleContactSelect');
-                        const companyNameInput = document.getElementById('saleCompanyName');
-                        const addProductBtn = document.getElementById('addProductBtn');
-                        const invoiceItemsTable = document.getElementById('invoiceItemsTable');
-                        const totalQuantitySpan = document.getElementById('invoiceTotalQuantity');
-                        const totalAmountSpan = document.getElementById('invoiceTotalAmount');
-                        const saleForm = document.getElementById('saleForm');
+                    showSaleFormModal(orderId = null) {
+                        // For simplicity, we assume we are creating a new invoice. Edit functionality can be added later.
+                        const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                        const productOptions = this.products.map(p => `<option value="${p.id}">${p.name} - ${this.formatPrice(p.price)}</option>`).join('');
 
-                        contactSelect.onchange = (e) => {
-                            const contactId = e.target.value; // No parseInt
-                            const contact = this.contacts.find(c => c.id === contactId);
-                            const company = this.companies.find(c => c.id === contact?.companyId);
-                            companyNameInput.value = company ? company.name : '---';
+                        // Default seller info (can be made dynamic later)
+                        const sellerInfo = {
+                            name: 'شرکت بهداد صنعت جنوب',
+                            address: 'آدرس شرکت شما',
+                            phone: 'شماره تماس شما',
+                            economic_code: 'کد اقتصادی شما'
                         };
 
-                        const renderInvoiceItems = () => {
-                            if (invoiceItems.length === 0) {
-                                invoiceItemsTable.innerHTML = '<tr><td colspan="7" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr>';
-                                totalQuantitySpan.textContent = '۰';
-                                totalAmountSpan.textContent = '۰ تومان';
-                                return;
-                            }
+                        const modalHTML = `
+    <div class="modal-backdrop" id="saleFormModal">
+        <div class="modal-content max-w-4xl">
+            <form id="saleForm">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-gray-900">صدور فاکتور فروش استاندارد</h3>
+                    <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <div class="border p-4 rounded-lg space-y-2 bg-gray-50">
+                        <h4 class="font-bold">اطلاعات فروشنده</h4>
+                        <div><label class="text-sm">نام شرکت:</label><input name="seller_name" value="${sellerInfo.name}" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                        <div><label class="text-sm">آدرس:</label><input name="seller_address" value="${sellerInfo.address}" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                        <div><label class="text-sm">شماره تماس:</label><input name="seller_phone" value="${sellerInfo.phone}" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                    </div>
+                    <div class="border p-4 rounded-lg space-y-2">
+                        <h4 class="font-bold">اطلاعات خریدار</h4>
+                        <div>
+                            <label class="text-sm">انتخاب مشتری:</label>
+                            <select name="contactId" id="saleContactSelect" required class="mt-1 w-full border rounded p-2 text-sm">
+                                <option value="" disabled selected>یک مخاطب را انتخاب کنید...</option>
+                                ${contactOptions}
+                            </select>
+                        </div>
+                        <div><label class="text-sm">آدرس:</label><input name="buyer_address" id="buyer_address" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                        <div><label class="text-sm">شماره تماس:</label><input name="buyer_phone" id="buyer_phone" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                    </div>
+                </div>
 
-                            let totalQuantity = 0;
-                            let totalAmount = 0;
+                <div class="border rounded-lg p-4 my-4">
+                    <h4 class="font-bold mb-3">افزودن محصول به فاکتور</h4>
+                    <div class="grid grid-cols-12 gap-2 items-end">
+                        <div class="col-span-6"><label class="text-sm">محصول</label><select id="invoiceProduct" class="w-full mt-1 border rounded p-2 text-sm">${productOptions}</select></div>
+                        <div class="col-span-2"><label class="text-sm">تعداد</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border rounded p-2 text-sm text-center"></div>
+                        <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
+                    </div>
+                </div>
 
-                            invoiceItemsTable.innerHTML = invoiceItems.map((item, index) => {
-                                const product = this.products.find(p => p.id === item.productId);
-                                if (!product) return ''; // Skip if product not found
-                                const itemTotal = (item.price * item.quantity) - item.discount;
-                                totalQuantity += item.quantity;
-                                totalAmount += itemTotal;
-                                return `
-                <tr class="border-b text-right">
-                    <td class="p-2">${index + 1}</td>
-                    <td class="p-2">${product.name}</td>
-                    <td class="p-2">${item.quantity} عدد</td>
-                    <td class="p-2">${this.formatPrice(item.price)}</td>
-                    <td class="p-2">${this.formatPrice(item.discount)}</td>
-                    <td class="p-2 font-bold">${this.formatPrice(itemTotal)}</td>
-                    <td class="p-2 text-center"><button type="button" onclick="app.removeInvoiceItem(${index})" class="text-red-500"><i class="fas fa-trash"></i></button></td>
-                </tr>
-            `;
-                            }).join('');
+                <h4 class="font-bold mb-2">لیست محصولات فاکتور</h4>
+                <div class="border rounded-lg max-h-48 overflow-y-auto">
+                    <table class="w-full text-sm"><thead class="bg-gray-100 text-xs uppercase"><tr class="text-right"><th class="p-2">#</th><th class="p-2">شرح</th><th class="p-2">تعداد</th><th class="p-2">قیمت واحد</th><th class="p-2">مبلغ کل</th><th class="p-2"></th></tr></thead>
+                        <tbody id="invoiceItemsTable"><tr><td colspan="6" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr></tbody>
+                    </table>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div class="space-y-2">
+                         <div><label class="text-sm">تاریخ سررسید:</label><input name="due_date" type="date" class="mt-1 w-full border rounded p-2 text-sm"></div>
+                    </div>
+                    <div class="space-y-2 text-sm p-4 bg-gray-50 rounded-lg">
+                        <div class="flex justify-between"><span>جمع کل (قبل از تخفیف):</span><span id="invoiceSubtotal">۰ تومان</span></div>
+                        <div class="flex justify-between items-center">
+                            <label>تخفیف (تومان):</label>
+                            <input name="discount" id="invoiceDiscount" type="number" value="0" min="0" class="w-1/2 border rounded p-1 text-left ltr">
+                        </div>
+                        <div class="flex justify-between"><span>مالیات (۹٪):</span><span id="invoiceTax">۰ تومان</span></div>
+                        <hr class="my-1 border-gray-300">
+                        <div class="flex justify-between font-bold text-lg"><span>مبلغ نهایی:</span><span id="invoiceTotalAmount">۰ تومان</span></div>
+                    </div>
+                </div>
 
-                            totalQuantitySpan.textContent = new Intl.NumberFormat('fa-IR').format(totalQuantity);
-                            totalAmountSpan.textContent = this.formatPrice(totalAmount);
-                        };
-
-                        window.app.removeInvoiceItem = (index) => {
-                            invoiceItems.splice(index, 1);
-                            renderInvoiceItems();
-                        };
-
-                        addProductBtn.onclick = () => {
-                            // The fix is here: parseInt is removed from productId
-                            const productId = document.getElementById('invoiceProduct').value;
-                            const quantity = parseInt(document.getElementById('invoiceQuantity').value);
-                            const discount = parseInt(document.getElementById('invoiceDiscount').value) || 0;
-                            if (!productId || !quantity || quantity < 1) return;
-
-                            const product = this.products.find(p => p.id === productId);
-                            if (!product) {
-                                alert('محصول انتخاب شده یافت نشد.');
-                                return;
-                            }
-
-                            const existingItemIndex = invoiceItems.findIndex(item => item.productId === productId);
-                            if (existingItemIndex > -1) {
-                                alert('این محصول قبلاً اضافه شده است. برای تغییر، آن را حذف و دوباره اضافه کنید.');
-                                return;
-                            }
-
-                            invoiceItems.push({ productId, quantity, price: product.price, discount });
-                            renderInvoiceItems();
-                        };
-
-                        saleForm.onsubmit = (e) => {
-                            e.preventDefault();
-                            const contactId = contactSelect.value;
-                            if (!contactId || invoiceItems.length === 0) {
-                                alert('لطفا مشتری را انتخاب کرده و حداقل یک محصول به فاکتور اضافه کنید.');
-                                return;
-                            }
-                            this.saveSale(contactId, invoiceItems);
-                        };
+                <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('saleFormModal')" class="px-4 py-2 bg-gray-200 rounded">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded">ثبت فاکتور</button></div>
+            </form>
+        </div>
+    </div>`;
+                        this.modalContainer.innerHTML = modalHTML;
+                        this.setupSaleFormListeners();
                     },
 
 
 
-                    async saveSale(contactId, items) {
-                        const totalPrice = items.reduce((sum, item) => sum + (item.quantity * item.price) - item.discount, 0);
+                    async saveSale(formData, items) {
+                        const contactId = formData.get('contactId');
+                        const contact = this.contacts.find(c => c.id == contactId);
+                        const company = this.companies.find(c => c.id === contact?.companyId);
+
+                        const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                        const discount = parseFloat(formData.get('discount')) || 0;
+                        const tax = (subtotal - discount) * 0.09;
+                        const totalPrice = subtotal - discount + tax;
+
                         const newOrder = {
                             contactId: contactId,
-                            items: items, // Supabase می‌تواند JSON را ذخیره کند
+                            items: items,
+                            status: 'pending_manager_approval', // or 'completed' if no approval is needed
+                            created_by: this.currentUser.id,
+                            orderDate: new Date().toISOString().split('T')[0],
+                            // New standard fields
+                            seller_info: {
+                                name: formData.get('seller_name'),
+                                address: formData.get('seller_address'),
+                                phone: formData.get('seller_phone'),
+                            },
+                            buyer_info: {
+                                name: contact.name,
+                                company: company?.name || '',
+                                address: formData.get('buyer_address'),
+                                phone: formData.get('buyer_phone'),
+                            },
+                            subtotal: subtotal,
+                            discount: discount,
+                            tax: tax,
                             totalPrice: totalPrice,
-                            status: 'pending_manager_approval',
-                            createdBy: this.currentUser.id,
-                            orderDate: new Date().toISOString().split('T')[0]
+                            due_date: formData.get('due_date') || null
                         };
 
                         try {
-                            const { error: saleError } = await supabase.from('salesOrders').insert([newOrder]);
+                            const { error: saleError } = await supabase.from('sales_orders').insert([newOrder]);
                             if (saleError) throw saleError;
 
-                            // آپدیت وضعیت مخاطب به "مشتری"
-                            const { error: contactError } = await supabase.from('contacts').update({ status: 'مشتری' }).eq('id', contactId);
-                            if (contactError) throw contactError;
+                            await supabase.from('contacts').update({ status: 'مشتری' }).eq('id', contactId);
 
                             this.closeModal('saleFormModal');
-                            this.showToast('فروش با موفقیت ثبت شد.', 'success'); // استفاده از نوتیفیکیشن موفقیت
+                            this.showToast('فاکتور با موفقیت ثبت شد.', 'success');
                         } catch (error) {
                             console.error("Error saving sale: ", error);
-                            alert('خطا در ثبت فروش.');
+                            this.showToast('خطا در ثبت فاکتور.', 'error');
                         }
                     },
+                    showInvoiceDetailModal(orderId) {
+                        const order = this.salesOrders.find(o => o.id == orderId);
+                        if (!order) return;
 
+                        const itemsRows = order.items.map((item, index) => {
+                            const product = this.products.find(p => p.id === item.productId);
+                            return `
+        <tr class="border-b">
+            <td class="p-2">${index + 1}</td>
+            <td class="p-2">${product?.name || 'محصول حذف شده'}</td>
+            <td class="p-2">${item.quantity}</td>
+            <td class="p-2">${this.formatPrice(item.price)}</td>
+            <td class="p-2 text-left">${this.formatPrice(item.price * item.quantity)}</td>
+        </tr>`;
+                        }).join('');
+
+                        const modalHTML = `
+    <div class="modal-backdrop" id="invoiceDetailModal">
+        <div class="modal-content max-w-4xl">
+            <div id="invoice-print-area" class="p-8 bg-white">
+                <div class="flex justify-between items-center border-b pb-4">
+                    <div>
+                        <h2 class="text-2xl font-bold">${order.seller_info?.name || 'فروشنده'}</h2>
+                        <p class="text-sm">${order.seller_info?.address || ''}</p>
+                        <p class="text-sm">تلفن: ${order.seller_info?.phone || ''}</p>
+                    </div>
+                    <h1 class="text-3xl font-bold text-gray-700">فاکتور فروش</h1>
+                </div>
+                <div class="grid grid-cols-2 gap-4 mt-6">
+                    <div>
+                        <p class="font-bold">صورتحساب برای:</p>
+                        <p>${order.buyer_info?.name || ''}</p>
+                        <p>${order.buyer_info?.address || ''}</p>
+                        <p>تلفن: ${order.buyer_info?.phone || ''}</p>
+                    </div>
+                    <div class="text-left">
+                        <p><span class="font-bold">شماره فاکتور:</span> ${order.invoice_number}</p>
+                        <p><span class="font-bold">تاریخ صدور:</span> ${this.formatDate(order.orderDate)}</p>
+                        <p><span class="font-bold">تاریخ سررسید:</span> ${order.due_date ? this.formatDate(order.due_date) : '-'}</p>
+                    </div>
+                </div>
+                <div class="mt-8">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100"><tr class="text-right">
+                            <th class="p-2">#</th><th class="p-2">شرح</th><th class="p-2">تعداد</th><th class="p-2">قیمت واحد</th><th class="p-2 text-left">مبلغ کل</th>
+                        </tr></thead>
+                        <tbody>${itemsRows}</tbody>
+                    </table>
+                </div>
+                <div class="flex justify-end mt-6">
+                    <div class="w-full md:w-1/2 space-y-2 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-600">جمع کل:</span><span>${this.formatPrice(order.subtotal)}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">تخفیف:</span><span>${this.formatPrice(order.discount)}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-600">مالیات (۹٪):</span><span>${this.formatPrice(order.tax)}</span></div>
+                        <hr>
+                        <div class="flex justify-between font-bold text-xl"><span >مبلغ نهایی:</span><span>${this.formatPrice(order.totalPrice)}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-4">
+                <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded">چاپ</button>
+                <button onclick="app.closeModal('invoiceDetailModal')" class="px-4 py-2 bg-gray-200 rounded">بستن</button>
+            </div>
+        </div>
+    </div>`;
+                        this.modalContainer.innerHTML = modalHTML;
+                    },
 
 
 
