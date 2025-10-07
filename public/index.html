@@ -294,6 +294,59 @@
             background-color: #17a2b8;
             /* Blue */
         }
+
+        /* Existing styles to modify */
+        .dot-payable {
+            background-color: #ef4444;
+            /* Red */
+        }
+
+        .dot-receivable {
+            background-color: #22c55e;
+            /* Green */
+        }
+
+        /* New styles for creative indicators */
+        .calendar td {
+            vertical-align: top;
+            position: relative;
+            /* Needed for positioning indicators */
+            padding-bottom: 28px;
+            /* Make space for indicators */
+        }
+
+        .cheque-indicators-container {
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .cheque-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            width: 22px;
+            height: 18px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .indicator-payable {
+            background-color: #ef4444;
+            /* Red-500 */
+        }
+
+        .indicator-receivable {
+            background-color: #22c55e;
+            /* Green-500 */
+        }
     </style>
 </head>
 
@@ -2535,24 +2588,28 @@
                         while (currentDay.isBefore(endOfMonth) || currentDay.isSame(endOfMonth, 'day')) {
                             const dateStr = currentDay.format('jYYYY/MM/DD');
 
-                            // --- اصلاح کلیدی اینجاست ---
-                            // به moment می‌گوییم که فرمت تاریخ ذخیره شده در دیتابیس میلادی (YYYY-MM-DD) است
                             const chequesForDay = this.cheques.filter(c => moment(c.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD') === dateStr);
+
+                            // ** منطق جدید برای شمارش چک‌ها **
+                            const payableCount = chequesForDay.filter(c => c.type === 'payable').length;
+                            const receivableCount = chequesForDay.filter(c => c.type === 'receivable').length;
 
                             let dayClasses = [];
                             if (dateStr === today) dayClasses.push('today');
                             if (chequesForDay.length > 0) dayClasses.push('day-with-cheques');
 
-                            const hasPayable = chequesForDay.some(c => c.type === 'payable');
-                            const hasReceivable = chequesForDay.some(c => c.type === 'receivable');
-
                             html += `<td class="${dayClasses.join(' ')}" ${chequesForDay.length > 0 ? `onclick="app.showChequesForDay('${dateStr}')"` : ''}>`;
                             html += `<div class="day-number">${currentDay.format('jD')}</div>`;
 
+                            // ** ساخت نشانگرهای جدید **
                             if (chequesForDay.length > 0) {
-                                html += '<div class="cheque-dot-container">';
-                                if (hasPayable) html += '<div class="cheque-dot dot-payable"></div>';
-                                if (hasReceivable) html += '<div class="cheque-dot dot-receivable"></div>';
+                                html += '<div class="cheque-indicators-container">';
+                                if (payableCount > 0) {
+                                    html += `<div class="cheque-indicator indicator-payable">${payableCount}</div>`;
+                                }
+                                if (receivableCount > 0) {
+                                    html += `<div class="cheque-indicator indicator-receivable">${receivableCount}</div>`;
+                                }
                                 html += '</div>';
                             }
 
@@ -2581,30 +2638,32 @@
 
                         const chequesHtml = chequesForDay.map(cheque => {
                             const typeText = cheque.type === 'payable' ? 'پرداختی' : 'دریافتی';
-                            const typeColor = cheque.type === 'payable' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800';
+                            // ** تغییر رنگ پرداختی به قرمز **
+                            const typeColor = cheque.type === 'payable' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
                             return `
-            <div class="p-3 border-b last:border-none">
-                <div class="flex justify-between items-center">
-                    <span class="font-bold">${this.formatPrice(cheque.amount)}</span>
-                    <span class="text-xs font-medium px-2.5 py-0.5 rounded ${typeColor}">${typeText}</span>
-                </div>
-                <p class="text-sm text-gray-600 mt-1">از ${cheque.from} به ${cheque.to}</p>
-            </div>
-        `;
+        <div class="p-3 border-b last:border-none">
+            <div class="flex justify-between items-center">
+                <span class="font-bold">${this.formatPrice(cheque.amount)}</span>
+                <span class="text-xs font-medium px-2.5 py-0.5 rounded ${typeColor}">${typeText}</span>
+            </div>
+            <p class="text-sm text-gray-600 mt-1">از ${cheque.from} به ${cheque.to}</p>
+            <p class="text-xs text-gray-500 mt-1">اطلاعات حساب: ${cheque.account_info || '-'}</p>
+        </div>
+    `;
                         }).join('');
 
                         const modalHTML = `
-        <div class="modal-backdrop" id="dayChequesModal">
-            <div class="modal-content max-w-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">چک‌های روز ${jDateStr}</h3>
-                    <button onclick="app.closeModal('dayChequesModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                <div class="space-y-2 max-h-64 overflow-y-auto">
-                    ${chequesHtml.length > 0 ? chequesHtml : '<p class="text-center text-gray-500">چکی برای این روز ثبت نشده است.</p>'}
-                </div>
-            </div>
-        </div>`;
+    <div class="modal-backdrop" id="dayChequesModal">
+        <div class="modal-content max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">چک‌های روز ${jDateStr}</h3>
+                <button onclick="app.closeModal('dayChequesModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
+            </div>
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+                ${chequesHtml.length > 0 ? chequesHtml : '<p class="text-center text-gray-500">چکی برای این روز ثبت نشده است.</p>'}
+            </div>
+        </div>
+    </div>`;
                         this.modalContainer.innerHTML = modalHTML;
                     },
                     renderChequeHistory() {
@@ -2828,50 +2887,42 @@
                         const dueDateValue = cheque.dueDate ? moment(cheque.dueDate, 'YYYY-MM-DD').format('jYYYY/MM/DD') : '';
 
                         const modalHTML = `
-    <div class="modal-backdrop" id="chequeFormModal">
-        <div class="modal-content max-w-lg">
-            <form id="chequeForm">
-                <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
-                <div class="space-y-4">
-                    <div><label class="block text-sm">مبلغ (تومان)</label><input name="amount" type="number" value="${cheque.amount || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                    <div>
-                        <label class="block text-sm mb-2">نوع چک</label>
-                        <div class="flex gap-4">
-                            <label class="flex items-center"><input type="radio" name="type" value="receivable" ${cheque.type === 'receivable' || !isEdit ? 'checked' : ''} class="ml-2">دریافتی</label>
-                            <label class="flex items-center"><input type="radio" name="type" value="payable" ${cheque.type === 'payable' ? 'checked' : ''} class="ml-2">پرداختی</label>
-                        </div>
+<div class="modal-backdrop" id="chequeFormModal">
+    <div class="modal-content max-w-lg">
+        <form id="chequeForm">
+            <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-bold">${title}</h3><button type="button" onclick="app.closeModal('chequeFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button></div>
+            <div class="space-y-4">
+                <div><label class="block text-sm">مبلغ (تومان)</label><input name="amount" type="number" value="${cheque.amount || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                <div>
+                    <label class="block text-sm mb-2">نوع چک</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center"><input type="radio" name="type" value="receivable" ${cheque.type === 'receivable' || !isEdit ? 'checked' : ''} class="ml-2">دریافتی</label>
+                        <label class="flex items-center"><input type="radio" name="type" value="payable" ${cheque.type === 'payable' ? 'checked' : ''} class="ml-2">پرداختی</label>
                     </div>
-                    <div id="accountInfoContainer" style="display: ${cheque.type === 'payable' ? 'block' : 'none'};">
-                        <label class="block text-sm">از کدام حساب</label>
-                        <input name="account_info" value="${cheque.account_info || ''}" class="mt-1 w-full border rounded-md p-2" placeholder="مثال: بانک ملت، شعبه مرکزی، ۱۲۳۴۵۶">
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" value="${cheque.from || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                        <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" value="${cheque.to || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
-                    </div>
-                    <div><label class="block text-sm">تاریخ سررسید (مثال: 1404/01/05)</label><input name="dueDate" value="${dueDateValue}" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
                 </div>
-                <div class="mt-6 flex justify-end gap-4">
-                    <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
-                    <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+                
+                <div id="accountInfoContainer">
+                    <label class="block text-sm">اطلاعات حساب (بانک، شعبه، شماره حساب/چک)</label>
+                    <input name="account_info" value="${cheque.account_info || ''}" class="mt-1 w-full border rounded-md p-2" placeholder="مثال: بانک ملت، شعبه مرکزی، چک ۱۲۳۴۵۶">
                 </div>
-            </form>
-        </div>
-    </div>`;
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div><label class="block text-sm">از (پرداخت کننده)</label><input name="from" value="${cheque.from || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                    <div><label class="block text-sm">به (دریافت کننده)</label><input name="to" value="${cheque.to || ''}" required class="mt-1 w-full border rounded-md p-2"></div>
+                </div>
+                <div><label class="block text-sm">تاریخ سررسید (مثال: 1404/01/05)</label><input name="dueDate" value="${dueDateValue}" required class="mt-1 w-full border rounded-md p-2 ltr text-left" placeholder="YYYY/MM/DD" maxlength="10"></div>
+            </div>
+            <div class="mt-6 flex justify-end gap-4">
+                <button type="button" onclick="app.closeModal('chequeFormModal')" class="px-4 py-2 bg-gray-200 rounded-md">لغو</button>
+                <button type="submit" class="btn-primary px-4 py-2 rounded-md">ذخیره</button>
+            </div>
+        </form>
+    </div>
+</div>`;
                         this.modalContainer.innerHTML = modalHTML;
 
-                        // Toggle visibility of account info based on cheque type
-                        const typeRadios = document.querySelectorAll('input[name="type"]');
-                        const accountInfoContainer = document.getElementById('accountInfoContainer');
-                        typeRadios.forEach(radio => {
-                            radio.addEventListener('change', (e) => {
-                                if (e.target.value === 'payable') {
-                                    accountInfoContainer.style.display = 'block';
-                                } else {
-                                    accountInfoContainer.style.display = 'none';
-                                }
-                            });
-                        });
+                        // **** حذف منطق مخفی کردن فیلد ****
+                        // دیگر نیازی به event listener برای نمایش یا عدم نمایش فیلد نیست
 
                         const dueDateInput = document.querySelector('input[name="dueDate"]');
                         if (dueDateInput) {
