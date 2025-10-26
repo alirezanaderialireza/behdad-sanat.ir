@@ -446,6 +446,7 @@
                     activePage: null,
                     dataLoaded: false,
                     currentCalendarDate: moment(),
+                    currentInvoiceItems: [], // <-- این خط جدید را اضافه کنید
 
                     navItems: {
                         admin: [
@@ -472,9 +473,13 @@
                         ],
                         accountant: [
                             { id: 'dashboard', icon: 'fa-tachometer-alt', text: 'داشبورد', content: 'generateDashboardContent' },
+                            { id: 'contacts', icon: 'fa-address-book', text: 'مخاطبین', content: 'generateContactsContent' },
+                            { id: 'companies', icon: 'fa-building', text: 'شرکت‌ها', content: 'generateCompaniesContent' },
+                            { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فروش', content: 'generateSalesContent' },
+                            { id: 'products', icon: 'fa-box-open', text: 'محصولات', content: 'generateProductsContent' },
                             { id: 'cheques', icon: 'fa-money-check-dollar', text: 'چک‌ها', content: 'generateChequesContent' },
-                            { id: 'sales', icon: 'fa-file-invoice-dollar', text: 'فاکتورها', content: 'generateSalesContent' },
-                            { id: 'reports', icon: 'fa-chart-line', text: 'گزارشات من', content: 'generateReportsContent' },
+                            { id: 'reports', icon: 'fa-chart-line', text: 'گزارشات', content: 'generateReportsContent' },
+                            { id: 'users', icon: 'fa-users-cog', text: 'مدیریت کاربران', content: 'generateUserManagementContent' },
                             // آیتم جدید زیر را اضافه کنید
                             { id: 'settings', icon: 'fa-cog', text: 'تنظیمات', content: 'generateSettingsContent' }
                         ]
@@ -1174,13 +1179,11 @@
                                 return `
             <div class="product-circle-container">
                 <input type="checkbox" class="product-compare-checkbox" onchange="app.toggleProductForComparison('${product.id}')">
-                <div onclick="app.showProductDetails('${product.id}')">
+                <div onclick="app.showProductDetails('${product.id}')" class="relative">
                     ${deleteButton}
                     ${editButton}
                     <div class="product-circle">
-                        ${product.name}
-                        <br>
-                        <span class="text-xs font-normal">${this.formatPrice(product.price)}</span>
+                       ${product.name}
                     </div>
                 </div>
             </div>`;
@@ -1235,7 +1238,7 @@
 
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-md">
                     <div><label class="font-bold text-sm text-gray-600">حجم:</label><p class="text-gray-800 font-semibold">${displayValue(product.volume)}</p></div>
-                    <div><label class="font-bold text-sm text-gray-600">قیمت:</label><p class="text-green-600 font-bold text-lg">${this.formatPrice(product.price)}</p></div>
+                   
                 </div>
 
                 <h4 class="text-md font-semibold text-gray-800 pt-3 border-t">مشخصات فنی</h4>
@@ -1295,8 +1298,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label class="block text-sm">نام محصول</label><input name="name" value="${product.name || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
                 <div><label class="block text-sm">حجم</label><input name="volume" value="${product.volume || ''}" class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-                <div><label class="block text-sm">قیمت (تومان)</label><input name="price" type="number" value="${product.price || ''}" required class="mt-1 w-full border border-gray-300 rounded-md p-2"></div>
-            </div>
+                
             <hr class="my-4"/>
             <h4 class="text-md font-semibold text-gray-700">مشخصات فنی</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1344,7 +1346,7 @@
                         const productData = {
                             name: formData.get('name'),
                             volume: formData.get('volume'),
-                            price: getIntValue('price') || 0,
+
                             description: formData.get('description'),
                             categoryId: categoryId,
                             // Add new fields
@@ -1356,8 +1358,8 @@
                             density: getNumericValue('density')
                         };
 
-                        if (!productData.name || !productData.price) {
-                            this.showToast('نام محصول و قیمت نمی‌توانند خالی باشند.', 'error');
+                        if (!productData.name) {
+                            this.showToast('نام محصول نمی‌تواند خالی باشد.', 'error');
                             return;
                         }
 
@@ -1501,7 +1503,7 @@
         <div class="card p-6">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-xl font-bold text-gray-800">تاریخچه فروش</h3>
-                ${this.currentUser.role !== 'accountant' ? `<button onclick="app.showSaleFormModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>صدور فاکتور جدید</button>` : ''}
+                <button onclick="app.showSaleFormModal()" class="btn-primary px-4 py-2 rounded-md text-sm"><i class="fas fa-plus ml-2"></i>صدور فاکتور جدید</button>
             </div>
             <div class="overflow-x-auto border rounded-lg">
                 <table class="w-full text-sm text-right">
@@ -1522,15 +1524,20 @@
                             return `<div class="card p-6 text-red-500">خطا در بارگذاری اطلاعات فروش.</div>`;
                         }
                     },
+                    // این تابع را به طور کامل جایگزین کنید
                     showSaleFormModal(orderId = null) {
-                        // *** تغییر: فیلتر حذف شد تا تمام مخاطبین، از جمله سرنخ جدید، نمایش داده شوند ***
+                        // ۱. آیتم‌های فاکتور قبلی را پاک می‌کنیم
+                        this.currentInvoiceItems = [];
+
+                        // ۲. قیمت را از متن گزینه‌ها حذف کرده و به data-price منتقل می‌کنیم
+                        const productOptions = this.products.map(p => {
+                            return `<option value="${p.id}" data-price="${p.price || 0}">${p.name}</option>`
+                        }).join('');
+
                         const contactOptions = this.contacts
                             .map(c => `<option value="${c.id}">${c.name}</option>`)
                             .join('');
 
-                        const productOptions = this.products.map(p => `<option value="${p.id}">${p.name} - ${this.formatPrice(p.price)}</option>`).join('');
-
-                        // Default seller info (can be made dynamic later)
                         const sellerInfo = {
                             name: 'شرکت بهداد صنعت جنوب',
                             address: 'آدرس شرکت شما',
@@ -1543,7 +1550,7 @@
         <div class="modal-content max-w-4xl">
             <form id="saleForm">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-900">صدور فاکتور فروش استاندارد</h3>
+                    <h3 class="text-xl font-bold text-gray-900">صدور فاکتور فروش</h3>
                     <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
                 </div>
                 
@@ -1571,7 +1578,8 @@
                 <div class="border rounded-lg p-4 my-4">
                     <h4 class="font-bold mb-3">افزودن محصول به فاکتور</h4>
                     <div class="grid grid-cols-12 gap-2 items-end">
-                        <div class="col-span-6"><label class="text-sm">محصول</label><select id="invoiceProduct" class="w-full mt-1 border rounded p-2 text-sm">${productOptions}</select></div>
+                        <div class="col-span-5"><label class="text-sm">محصول</label><select id="invoiceProduct" class="w-full mt-1 border rounded p-2 text-sm">${productOptions}</select></div>
+                        <div class="col-span-3"><label class="text-sm">قیمت واحد (تومان)</label><input type="number" id="invoiceItemPrice" placeholder="0" required class="w-full mt-1 border rounded p-2 text-sm text-center ltr"></div>
                         <div class="col-span-2"><label class="text-sm">تعداد</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border rounded p-2 text-sm text-center"></div>
                         <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
                     </div>
@@ -1605,95 +1613,173 @@
         </div>
     </div>`;
                         this.modalContainer.innerHTML = modalHTML;
+
+                        // این تابع فراخوانی می‌شود اما در کد شما وجود ندارد
+                        // ما آن را در مرحله بعد اضافه خواهیم کرد
                         this.setupSaleFormListeners();
                     },
+                    // ... بعد از پایان تابع saveSale
+                    // توابع جدید زیر را برای مدیریت فرم فاکتور اضافه کنید
 
-                    showSaleFormModal(orderId = null) {
-                        // For simplicity, we assume we are creating a new invoice. Edit functionality can be added later.
-                        const contactOptions = this.contacts.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-                        const productOptions = this.products.map(p => `<option value="${p.id}">${p.name} - ${this.formatPrice(p.price)}</option>`).join('');
+                    setupSaleFormListeners() {
+                        const productSelect = document.getElementById('invoiceProduct');
+                        const priceInput = document.getElementById('invoiceItemPrice');
+                        const quantityInput = document.getElementById('invoiceQuantity');
+                        const addBtn = document.getElementById('addProductBtn');
+                        const discountInput = document.getElementById('invoiceDiscount');
+                        const saleForm = document.getElementById('saleForm');
 
-                        // Default seller info (can be made dynamic later)
-                        const sellerInfo = {
-                            name: 'شرکت بهداد صنعت جنوب',
-                            address: 'آدرس شرکت شما',
-                            phone: 'شماره تماس شما',
-                            economic_code: 'کد اقتصادی شما'
-                        };
+                        // منطق جدید: پر کردن خودکار قیمت پیش‌فرض
+                        if (productSelect && priceInput) {
+                            productSelect.onchange = (e) => {
+                                const selectedOption = e.target.options[e.target.selectedIndex];
+                                const defaultPrice = selectedOption.getAttribute('data-price');
+                                priceInput.value = defaultPrice || 0;
+                            };
+                            // اجرای یک‌باره برای آیتم اول
+                            productSelect.dispatchEvent(new Event('change'));
+                        }
 
-                        const modalHTML = `
-    <div class="modal-backdrop" id="saleFormModal">
-        <div class="modal-content max-w-4xl">
-            <form id="saleForm">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-gray-900">صدور فاکتور فروش استاندارد</h3>
-                    <button type="button" onclick="app.closeModal('saleFormModal')" class="text-gray-500 hover:text-gray-800 text-2xl font-bold">&times;</button>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <div class="border p-4 rounded-lg space-y-2 bg-gray-50">
-                        <h4 class="font-bold">اطلاعات فروشنده</h4>
-                        <div><label class="text-sm">نام شرکت:</label><input name="seller_name" value="${sellerInfo.name}" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
-                        <div><label class="text-sm">آدرس:</label><input name="seller_address" value="${sellerInfo.address}" class="mt-1 w-full border rounded p-2 text-sm"></div>
-                        <div><label class="text-sm">شماره تماس:</label><input name="seller_phone" value="${sellerInfo.phone}" class="mt-1 w-full border rounded p-2 text-sm"></div>
-                    </div>
-                    <div class="border p-4 rounded-lg space-y-2">
-                        <h4 class="font-bold">اطلاعات خریدار</h4>
-                        <div>
-                            <label class="text-sm">انتخاب مشتری:</label>
-                            <select name="contactId" id="saleContactSelect" required class="mt-1 w-full border rounded p-2 text-sm">
-                                <option value="" disabled selected>یک مخاطب را انتخاب کنید...</option>
-                                ${contactOptions}
-                            </select>
-                        </div>
-                        <div><label class="text-sm">آدرس:</label><input name="buyer_address" id="buyer_address" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
-                        <div><label class="text-sm">شماره تماس:</label><input name="buyer_phone" id="buyer_phone" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
-                    </div>
-                </div>
+                        // منطق جدید: دکمه افزودن محصول
+                        if (addBtn) {
+                            addBtn.onclick = () => {
+                                const productId = productSelect.value;
+                                const selectedOption = productSelect.options[productSelect.selectedIndex];
+                                const productName = selectedOption.text;
+                                // *** خواندن قیمت دستی از فیلد جدید ***
+                                const price = parseFloat(priceInput.value);
+                                const quantity = parseInt(quantityInput.value);
 
-                <div class="border rounded-lg p-4 my-4">
-                    <h4 class="font-bold mb-3">افزودن محصول به فاکتور</h4>
-                    <div class="grid grid-cols-12 gap-2 items-end">
-                        <div class="col-span-6"><label class="text-sm">محصول</label><select id="invoiceProduct" class="w-full mt-1 border rounded p-2 text-sm">${productOptions}</select></div>
-                        <div class="col-span-2"><label class="text-sm">تعداد</label><input type="number" id="invoiceQuantity" value="1" min="1" class="w-full mt-1 border rounded p-2 text-sm text-center"></div>
-                        <div class="col-span-2"><button type="button" id="addProductBtn" class="btn-primary w-full py-2 rounded-md text-sm">افزودن</button></div>
-                    </div>
-                </div>
+                                if (!productId || isNaN(price) || isNaN(quantity) || quantity <= 0 || price < 0) {
+                                    this.showToast('اطلاعات محصول، قیمت، یا تعداد نامعتبر است.', 'error');
+                                    return;
+                                }
 
-                <h4 class="font-bold mb-2">لیست محصولات فاکتور</h4>
-                <div class="border rounded-lg max-h-48 overflow-y-auto">
-                    <table class="w-full text-sm"><thead class="bg-gray-100 text-xs uppercase"><tr class="text-right"><th class="p-2">#</th><th class="p-2">شرح</th><th class="p-2">تعداد</th><th class="p-2">قیمت واحد</th><th class="p-2">مبلغ کل</th><th class="p-2"></th></tr></thead>
-                        <tbody id="invoiceItemsTable"><tr><td colspan="6" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr></tbody>
-                    </table>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                    <div class="space-y-2">
-                         <div><label class="text-sm">تاریخ سررسید:</label><input name="due_date" type="date" class="mt-1 w-full border rounded p-2 text-sm"></div>
-                    </div>
-                    <div class="space-y-2 text-sm p-4 bg-gray-50 rounded-lg">
-                        <div class="flex justify-between"><span>جمع کل (قبل از تخفیف):</span><span id="invoiceSubtotal">۰ تومان</span></div>
-                        <div class="flex justify-between items-center">
-                            <label>تخفیف (تومان):</label>
-                            <input name="discount" id="invoiceDiscount" type="number" value="0" min="0" class="w-1/2 border rounded p-1 text-left ltr">
-                        </div>
-                        <div class="flex justify-between"><span>مالیات (۹٪):</span><span id="invoiceTax">۰ تومان</span></div>
-                        <hr class="my-1 border-gray-300">
-                        <div class="flex justify-between font-bold text-lg"><span>مبلغ نهایی:</span><span id="invoiceTotalAmount">۰ تومان</span></div>
-                    </div>
-                </div>
+                                this.currentInvoiceItems.push({
+                                    productId: productId,
+                                    name: productName,
+                                    price: price, // <-- ذخیره قیمت دستی
+                                    quantity: quantity
+                                });
 
-                <div class="mt-6 flex justify-end gap-4"><button type="button" onclick="app.closeModal('saleFormModal')" class="px-4 py-2 bg-gray-200 rounded">لغو</button><button type="submit" class="btn-primary px-4 py-2 rounded">ثبت فاکتور</button></div>
-            </form>
-        </div>
-    </div>`;
-                        this.modalContainer.innerHTML = modalHTML;
-                        this.setupSaleFormListeners();
+                                this.renderInvoiceItemsTable();
+                                this.updateInvoiceTotals();
+
+                                // بازنشانی فیلدها
+                                quantityInput.value = 1;
+                                productSelect.focus();
+                                // قیمت را مجدداً بر اساس محصول انتخابی تنظیم کن
+                                productSelect.dispatchEvent(new Event('change'));
+                            };
+                        }
+
+                        // محاسبه مجدد کل با تغییر تخفیف
+                        if (discountInput) {
+                            discountInput.oninput = () => this.updateInvoiceTotals();
+                        }
+
+                        // مدیریت ثبت نهایی فرم
+                        if (saleForm) {
+                            saleForm.onsubmit = (e) => {
+                                e.preventDefault();
+                                if (this.currentInvoiceItems.length === 0) {
+                                    this.showToast('لطفا حداقل یک محصول به فاکتور اضافه کنید.', 'error');
+                                    return;
+                                }
+                                // ارسال آیتم‌ها با قیمت‌های دستی به تابع ذخیره‌سازی
+                                this.saveSale(new FormData(e.target), this.currentInvoiceItems);
+                            };
+                        }
+                    },
+
+                    // تابع کمکی برای رندر جدول آیتم‌های فاکتور
+                    renderInvoiceItemsTable() {
+                        const tableBody = document.getElementById('invoiceItemsTable');
+                        if (this.currentInvoiceItems.length === 0) {
+                            tableBody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500">محصولی اضافه نشده است.</td></tr>';
+                            return;
+                        }
+
+                        tableBody.innerHTML = this.currentInvoiceItems.map((item, index) => {
+                            return `
+                                <tr class="border-b">
+                                    <td class="p-2">${index + 1}</td>
+                                    <td class="p-2">${item.name}</td>
+                                    <td class="p-2">${item.quantity}</td>
+                                    <td class="p-2">${this.formatPrice(item.price)}</td>
+                                    <td class="p-2 font-semibold">${this.formatPrice(item.price * item.quantity)}</td>
+                                    <td class="p-2"><button type="button" onclick="app.removeInvoiceItem(${index})" class="text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button></td>
+                                </tr>
+                            `;
+                        }).join('');
+                    },
+
+                    // تابع کمکی برای حذف یک آیتم از فاکتور
+                    removeInvoiceItem(index) {
+                        this.currentInvoiceItems.splice(index, 1);
+                        this.renderInvoiceItemsTable();
+                        this.updateInvoiceTotals();
+                    },
+
+                    // تابع کمکی برای محاسبه و به‌روزرسانی مبالغ نهایی
+                    updateInvoiceTotals() {
+                        const discountInput = document.getElementById('invoiceDiscount');
+                        const subtotalEl = document.getElementById('invoiceSubtotal');
+                        const taxEl = document.getElementById('invoiceTax');
+                        const totalEl = document.getElementById('invoiceTotalAmount');
+
+                        const subtotal = this.currentInvoiceItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                        const discount = parseFloat(discountInput.value) || 0;
+
+                        let taxableAmount = subtotal - discount;
+                        if (taxableAmount < 0) taxableAmount = 0;
+
+                        const tax = taxableAmount * 0.09; // مالیات ۹٪
+                        const total = taxableAmount + tax;
+
+                        subtotalEl.textContent = this.formatPrice(subtotal);
+                        taxEl.textContent = this.formatPrice(tax);
+                        totalEl.textContent = this.formatPrice(total);
                     },
 
 
 
                     async saveSale(formData, items) {
+                        // --- منطق جدید برای شماره فاکتور خودکار ---
+                        let newInvoiceNumber;
+                        try {
+                            // ۱. آخرین شماره فاکتور را پیدا کن
+                            const { data: lastOrder, error: fetchError } = await supabase
+                                .from('sales_orders')
+                                .select('invoice_number')
+                                .order('invoice_number', { ascending: false }) // مرتب‌سازی عددی (مهم)
+                                .limit(1)
+                                .single();
+
+                            // ۲. بررسی خطا (PGRST116 یعنی 'یافت نشد' که خطا نیست)
+                            if (fetchError && fetchError.code !== 'PGRST116') {
+                                throw fetchError;
+                            }
+
+                            // ۳. محاسبه شماره جدید
+                            if (lastOrder && lastOrder.invoice_number) {
+                                newInvoiceNumber = parseInt(lastOrder.invoice_number) + 1; // آخرین شماره + ۱
+                            } else {
+                                newInvoiceNumber = 1; // این اولین فاکتور سیستم است
+                            }
+
+                            if (isNaN(newInvoiceNumber)) { // اطمینان از عدم وجود خطا
+                                newInvoiceNumber = 1;
+                            }
+
+                        } catch (error) {
+                            console.error("Error generating invoice number: ", error);
+                            this.showToast('خطا در ساخت شماره فاکتور خودکار.', 'error');
+                            return; // عملیات را متوقف کن
+                        }
+                        // --- پایان منطق جدید ---
+
+
                         const contactId = formData.get('contactId');
                         const contact = this.contacts.find(c => c.id == contactId);
                         const company = this.companies.find(c => c.id === contact?.companyId);
@@ -1705,6 +1791,7 @@
 
                         const newOrder = {
                             contactId: contactId,
+                            invoice_number: newInvoiceNumber, // <-- استفاده از شماره فاکتور خودکار
                             items: items,
                             status: 'pending_manager_approval', // or 'completed' if no approval is needed
                             created_by: this.currentUser.id,
@@ -1735,10 +1822,15 @@
                             await supabase.from('contacts').update({ status: 'مشتری' }).eq('id', contactId);
 
                             this.closeModal('saleFormModal');
-                            this.showToast('فاکتور با موفقیت ثبت شد.', 'success');
+                            this.showToast(`فاکتور شماره ${newInvoiceNumber} با موفقیت ثبت شد.`, 'success');
                         } catch (error) {
                             console.error("Error saving sale: ", error);
-                            this.showToast('خطا در ثبت فاکتور.', 'error');
+                            // اگر خطا مربوط به تکراری بودن شماره فاکتور بود (بسیار بعید اما ممکن است)
+                            if (error.code === '23505') {
+                                this.showToast('خطا: شماره فاکتور تکراری بود. لطفا دوباره تلاش کنید.', 'error');
+                            } else {
+                                this.showToast('خطا در ثبت فاکتور.', 'error');
+                            }
                         }
                     },
                     showInvoiceDetailModal(orderId) {
@@ -2260,13 +2352,13 @@
 
                     // --- Restored Dummy Pages ---
                     generateUserManagementContent() {
-                        if (this.currentUser.role !== 'admin') {
+                        if (this.currentUser.role !== 'admin' && this.currentUser.role !== 'accountant') {
                             return '<div class="card p-6 text-red-600">شما دسترسی به این بخش را ندارید.</div>';
                         }
 
                         // `this.users` از قبل در تابع setupSession از جدول `profiles` خوانده شده است
                         const userRows = Object.values(this.users).map(user => {
-                            const roleMap = { admin: 'مدیر', sales: 'کارشناس فروش', accountant: 'حسابدار' };
+                            const roleMap = { admin: 'مدیر', sales: 'کارشناس فروش', accountant: 'حسابدار ارشد' };
 
                             // بهبود امنیتی: مدیر نمی‌تواند حساب کاربری خودش را حذف یا ویرایش کند
                             const isCurrentUser = user.id === this.currentUser.id;
@@ -2541,7 +2633,7 @@
                     },
                     async generateReportsContent() {
                         // نمای مدیر: مشاهده گزارش همه کاربران
-                        if (this.currentUser.role === 'admin') {
+                        if (this.currentUser.role === 'admin' || this.currentUser.role === 'accountant') {
                             try {
                                 const { data: reports, error } = await supabase.from('reports').select('*').order('report_date', { ascending: false });
                                 if (error) throw error;
@@ -3101,14 +3193,7 @@
                         };
 
                         // Helper for price
-                        const createPriceRow = () => {
-                            let row = `<tr><td class="attribute-label">قیمت</td>`;
-                            selectedProducts.forEach(product => {
-                                row += `<td class="font-bold text-green-600">${this.formatPrice(product.price)}</td>`;
-                            });
-                            row += '</tr>';
-                            return row;
-                        };
+
 
                         const comparisonHTML = `
         <div class="flex justify-between items-center mb-4">
@@ -3121,7 +3206,6 @@
             <table class="comparison-table bg-white">
                 <thead>${tableHeader}</thead>
                 <tbody>
-                    ${createPriceRow()}
                     ${createRow('حجم', 'volume')}
                     ${createRow('گرانروی (cSt)', 'viscosity_cst')}
                     ${createRow('شاخص گرانروی', 'viscosity_index')}
