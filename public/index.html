@@ -1689,6 +1689,8 @@
                         </div>`;
 
                         // قطعه اطلاعات خریدار (با select خالی برای Tom-Select)
+                        // ...
+                        // قطعه اطلاعات خریدار (با select خالی برای Tom-Select)
                         const buyerInfoHtml = `
                         <div class="border p-4 rounded-lg space-y-2">
                             <h4 class="font-bold">اطلاعات خریدار</h4>
@@ -1696,10 +1698,10 @@
                                 <label class="text-sm">انتخاب مشتری:</label>
                                 <select name="contactId" id="saleContactSelect" required placeholder="جستجو یا انتخاب مخاطب..."></select>
                             </div>
-                            <div><label class="text-sm">آدرس:</label><input name="buyer_address" id="buyer_address" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
+                            <div><label class="text-sm">آدرس:</label><input name="buyer_address" id="buyer_address" class="mt-1 w-full border rounded p-2 text-sm"></div>
                             <div><label class="text-sm">شماره تماس:</label><input name="buyer_phone" id="buyer_phone" class="mt-1 w-full border rounded p-2 text-sm bg-gray-100" readonly></div>
                         </div>`;
-
+                        // ...
                         // قطعه افزودن محصول (با select‌های خالی برای Tom-Select)
                         const addProductHtml = `
                         <div class="border rounded-lg p-4 my-4">
@@ -1811,7 +1813,8 @@
                             if (!value) return;
                             const contact = this.contacts.find(c => c.id == value);
                             if (contact) {
-                                document.getElementById('buyer_address').value = contact.details || ''; // آدرس را از جزئیات می‌خواند
+                                // خط زیر حذف شد تا آدرس خودکار پر نشود
+                                // document.getElementById('buyer_address').value = contact.details || ''; 
                                 document.getElementById('buyer_phone').value = contact.phone || '';
                             }
                         });
